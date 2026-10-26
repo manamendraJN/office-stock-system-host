@@ -14,7 +14,7 @@ RUN pip install -r requirements.txt
 COPY --chown=app:app . .
 
 # Build the static files with throw-away values; real settings are supplied at run time.
-RUN DJANGO_DEBUG=true python manage.py collectstatic --noinput && chown -R app:app /srv/app/staticfiles \
+RUN DJANGO_DEBUG=false DJANGO_SECRET_KEY=build-only-throwaway-key-0123456789-0123456789-0123456789 python manage.py collectstatic --noinput && chown -R app:app /srv/app/staticfiles \
     && chmod +x docker/entrypoint.sh
 
 USER app
