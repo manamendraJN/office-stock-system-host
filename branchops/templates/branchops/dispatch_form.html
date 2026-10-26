@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}New dispatch{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>New dispatch</h1></div></div>
+<form method="get" class="card card-body medium" style="margin-bottom:1rem">
+  <div class="field"><label class="lbl" for="dsp-request">Send for</label>
+    <select name="request" id="dsp-request" onchange="this.form.submit()">
+      <option value="">No request (send directly)</option>
+      {% for o in open_requests %}<option value="{{ o.pk }}" {% if req and req.pk == o.pk %}selected{% endif %}>{{ o.number }} · {{ o.branch.name }}</option>{% endfor %}
+    </select></div>
+</form>
+<form method="post" class="card card-body stack medium" novalidate>
+  {% csrf_token %}
+  {% if req %}<input type="hidden" name="request" value="{{ req.pk }}">{% endif %}
+  {% if form.non_field_errors %}<div class="alert alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  {% if line_error %}<div class="alert alert-error" role="alert">{{ line_error }}</div>{% endif %}
+  {% if req %}
+    <p class="notice" style="margin:0">Sending to <b>{{ req.branch.name }}</b>. The quantities start at what is still to send on the request. Set a quantity to 0 to hold an item back for a later dispatch.</p>
+    {% field form.dispatch_date %}
+    <div class="table-wrap" style="border:1px solid var(--s200);border-radius:8px"><table class="data">
+      <thead><tr><th>Item</th><th class="num">Still to send</th><th class="num">In stock</th><th class="num">Send now</th></tr></thead>
+      <tbody>{% for x in req_rows %}
+        <tr><td><b>{{ x.l.item.name }}</b><div class="mono small muted">{{ x.l.item.code }}</div></td>
+        <td class="num">{{ x.left }}</td><td class="num {% if x.stock < x.left %}neg{% endif %}">{{ x.stock }}</td>
+        <td class="num"><input type="number" name="qty_{{ x.l.item_id }}" min="0" max="{{ x.left }}" step="1" inputmode="numeric" value="{{ x.value }}" style="width:6rem;text-align:right" aria-label="Send {{ x.l.item.name }}" class="{% if x.error %}invalid{% endif %}">
+          {% if x.error %}<div class="err small" role="alert" style="color:var(--red-600)">{{ x.error }}</div>{% endif %}</td></tr>{% endfor %}</tbody>
+    </table></div>
+  {% else %}
+    <div class="form-grid"><div>{% field form.destination %}</div><div>{% field form.dispatch_date %}</div></div>
+    {% include "inventory/_lines.html" with mode="simple" %}
+  {% endif %}
+  <p class="small muted" style="margin:0">The items leave the main office stock now and stay "in transit" until the branch confirms what arrived.</p>
+  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'branchops:dispatch_list' %}">Cancel</a><button class="btn" type="submit">Send items</button></div>
+</form>
+{% endblock %}

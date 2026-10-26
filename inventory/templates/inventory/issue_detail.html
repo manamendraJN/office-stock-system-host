@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{{ i.number }}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>{{ i.number }}</h1><p>{% status_badge 'issue' i.status %}</p></div>
+  <a class="btn btn-secondary" href="{% url 'inventory:issue_list' %}">Back to issues</a></div>
+<div class="card"><div class="card-body stack">
+  <dl class="facts">
+    <div><dt>Given to</dt><dd><b>{{ i.recipient }}</b></dd></div>
+    <div><dt>Status</dt><dd>{% status_badge 'issue' i.status %}</dd></div>
+    <div><dt>Department</dt><dd>{{ i.department|default:"–" }}</dd></div>
+    <div><dt>Date</dt><dd>{{ i.issue_date|fdate }}</dd></div>
+    <div><dt>Issued by</dt><dd>{{ i.issued_by.name }}</dd></div>
+    {% if show_branch %}<div><dt>Stock taken from</dt><dd>{{ i.branch.name|default:"Main office" }}</dd></div>{% endif %}
+  </dl>
+  {% if i.purpose %}<p class="notice" style="margin:0">{{ i.purpose }}</p>{% endif %}
+  <div class="table-wrap" style="border:1px solid var(--s200);border-radius:8px"><table class="data">
+    <thead><tr><th>Item</th><th class="num">Quantity</th></tr></thead>
+    <tbody>{% for l in lines %}<tr><td><b>{{ l.item.name }}</b><div class="mono small muted">{{ l.item.code }}</div></td>
+      <td class="num nowrap">{{ l.quantity }} <span class="muted">{{ l.item.unit }}</span></td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% if cancelled %}
+    <p class="small muted" style="margin:0">Cancelled{% if i.cancelled_by %} by {{ i.cancelled_by.name }}{% endif %}{% if i.cancelled_at %} on {{ i.cancelled_at|fdate }}{% endif %}{% if i.cancel_reason %}: {{ i.cancel_reason }}{% endif %}. The items went back into stock.</p>
+  {% elif can_issue %}
+    <form method="post" action="{% url 'inventory:issue_cancel' i.pk %}" class="stack" style="border-top:1px solid var(--s100);padding-top:1rem"
+          data-confirm="Cancel {{ i.number }}? The items go back into stock and the issue stays on record as cancelled.">
+      {% csrf_token %}
+      {% field form.reason %}
+      <div><button class="btn btn-danger" type="submit">Cancel this issue</button></div>
+    </form>
+  {% endif %}
+</div></div>
+{% endblock %}

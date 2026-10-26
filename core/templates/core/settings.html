@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Settings</h1><p>Audit recording, company details and the branch module</p></div></div>
+<div class="stack">
+  <div class="card"><div class="card-head"><h2>Audit logging</h2></div><div class="card-body" style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:space-between;align-items:flex-start">
+    <div style="max-width:36rem" class="small">
+      <p style="margin:0 0 .5rem;font-weight:500;color:var(--s900)">Status: {% if s.audit_logging_enabled %}{% badge "Recording" "green" %}{% else %}{% badge "Stopped" "gray" %}{% endif %}</p>
+      <p class="muted" style="margin:0;font-size:.875rem">Stop recording user actions without stopping their work. Actions performed while logging is stopped will not appear in the Audit Log. Existing entries remain available until cleared there.</p>
+    </div>
+    <form method="post" {% if s.audit_logging_enabled %}data-confirm="Stop audit logging? Actions will continue, but will not be recorded until logging is resumed."{% endif %}>
+      {% csrf_token %}<input type="hidden" name="action" value="audit_toggle">
+      <button class="btn {% if s.audit_logging_enabled %}btn-secondary{% endif %}" type="submit">{% if s.audit_logging_enabled %}Stop logging{% else %}Resume logging{% endif %}</button>
+    </form>
+  </div></div>
+
+  <div class="card"><div class="card-head"><h2>Branch module</h2></div><div class="card-body" style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:space-between;align-items:flex-start">
+    <div style="max-width:36rem;font-size:.875rem" class="muted">
+      <p style="margin:0 0 .5rem;font-weight:500;color:var(--s900)">Status: {% if s.branch_module_enabled %}{% badge "On" "green" %}{% else %}{% badge "Off" "gray" %}{% endif %}</p>
+      <p style="margin:0">Controls the whole branch side: branch requests, dispatches to branches and receipt confirmation. While it is off, those menus are hidden and the server refuses those actions. Items, purchases, office issues, stock counts and main-office reports keep working.</p>
+      <p style="margin:.5rem 0 0">It cannot be switched off while requests or dispatches are still open.</p>
+    </div>
+    <form method="post" data-confirm="{% if s.branch_module_enabled %}Switch the branch module off? Branch requests, dispatches and receipts will be hidden and blocked.{% else %}Switch the branch module on? Branch users will be able to request items and confirm receipts.{% endif %}">
+      {% csrf_token %}<input type="hidden" name="action" value="module_toggle">
+      <button class="btn {% if s.branch_module_enabled %}btn-secondary{% endif %}" type="submit">{% if s.branch_module_enabled %}Switch off{% else %}Switch on{% endif %}</button>
+    </form>
+  </div></div>
+
+  <div class="card"><div class="card-head"><h2>Company</h2></div><div class="card-body">
+    <form method="post" class="stack narrow" novalidate>
+      {% csrf_token %}<input type="hidden" name="action" value="company">
+      {% field company_form.company_name %}
+      <div><button class="btn" type="submit">Save</button></div>
+    </form>
+  </div></div>
+</div>
+{% endblock %}

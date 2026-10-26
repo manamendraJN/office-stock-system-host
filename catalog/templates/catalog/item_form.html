@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{% if item %}Edit item{% else %}Add item{% endif %}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>{% if item %}Edit item{% else %}Add item{% endif %}</h1></div></div>
+<form method="post" class="card card-body stack narrow" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  {% field form.name %}
+  <div class="form-grid"><div>{% field form.category %}</div><div>{% field form.unit %}</div></div>
+  <datalist id="unit-options">{% for u in units %}<option value="{{ u }}">{% endfor %}</datalist>
+  <div class="form-grid"><div>{% field form.code %}</div><div>{% field form.min_stock %}</div></div>
+  {% if item %}{% field form.active %}{% endif %}
+  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'catalog:item_list' %}">Cancel</a><button class="btn" type="submit">{% if item %}Save changes{% else %}Add item{% endif %}</button></div>
+</form>
+{% endblock %}

@@ -1,0 +1,10 @@
+<div class="field {{ css }}">
+  {% if f.field.widget.input_type == 'checkbox' %}
+    <label class="check">{{ f }} {{ f.label }}</label>
+  {% else %}
+    <label class="lbl" for="{{ f.id_for_label }}">{{ f.label }}{% if f.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>
+    {{ f }}
+  {% endif %}
+  {% if hint or f.help_text %}<div class="hint">{{ hint|default:f.help_text }}</div>{% endif %}
+  {% for e in f.errors %}<div class="err" role="alert">{{ e }}</div>{% endfor %}
+</div>

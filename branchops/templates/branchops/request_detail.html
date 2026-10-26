@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{{ r.number }}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>{{ r.number }}</h1><p>{% status_badge 'request' r.status %}</p></div>
+  <a class="btn btn-secondary" href="{% url 'branchops:request_list' %}">Back to requests</a></div>
+<div class="card"><div class="card-body stack">
+  <dl class="facts">
+    <div><dt>Branch</dt><dd><b>{{ r.branch.name }}</b></dd></div>
+    <div><dt>Status</dt><dd>{% status_badge 'request' r.status %}</dd></div>
+    <div><dt>Requested by</dt><dd>{{ r.requested_by.name }}</dd></div>
+    <div><dt>Date</dt><dd>{{ r.created_at|fdate }}</dd></div>
+    {% if r.reviewed_by %}<div><dt>Reviewed by</dt><dd>{{ r.reviewed_by.name }}</dd></div>{% endif %}
+  </dl>
+  {% if r.notes %}<p class="notice" style="margin:0">{{ r.notes }}</p>{% endif %}
+  <div class="table-wrap" style="border:1px solid var(--s200);border-radius:8px"><table class="data">
+    <thead><tr><th>Item</th><th class="num">Requested</th><th class="num">Approved</th><th class="num">Sent</th></tr></thead>
+    <tbody>{% for l in lines %}
+      <tr><td><b>{{ l.item.name }}</b><div class="mono small muted">{{ l.item.code }}</div>{% if l.reason %}<div class="small" style="color:var(--amber-700,#b45309)">{{ l.reason }}</div>{% endif %}</td>
+      <td class="num nowrap">{{ l.quantity_requested }} <span class="muted">{{ l.item.unit }}</span></td>
+      <td class="num">{% if r.status == 'submitted' %}<span class="muted">–</span>{% else %}{{ l.quantity_approved }}{% endif %}</td>
+      <td class="num">{{ l.quantity_dispatched }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <div class="form-actions" style="justify-content:flex-start;flex-wrap:wrap">
+    {% if can_review %}<a class="btn" href="{% url 'branchops:request_review' r.pk %}">Review request</a>{% endif %}
+    {% if can_dispatch %}<a class="btn" href="{% url 'branchops:dispatch_create' %}?request={{ r.pk }}">Create dispatch</a>{% endif %}
+    {% if can_cancel %}
+    <form method="post" action="{% url 'branchops:request_cancel' r.pk %}" data-confirm="Cancel {{ r.number }}? It stays on record but will not be sent.">{% csrf_token %}
+      <button class="btn btn-danger" type="submit">Cancel request</button></form>
+    {% endif %}
+  </div>
+</div></div>
+{% endblock %}

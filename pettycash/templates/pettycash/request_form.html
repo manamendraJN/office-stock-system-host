@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Request petty cash{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Request petty cash</h1></div></div>
+<form method="post" class="card card-body stack narrow" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <p class="notice" style="margin:0">You currently hold <b>{{ balance|money }}</b>. The low level is {{ low_level|money }}.</p>
+  {% field form.amount %}
+  {% field form.purpose %}
+  <p class="small muted" style="margin:0">A manager approves the request and hands over the money, and may give less than you ask for. You can cancel it until it has been reviewed.</p>
+  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'pettycash:overview' %}">Cancel</a><button class="btn" type="submit">Send request</button></div>
+</form>
+{% endblock %}

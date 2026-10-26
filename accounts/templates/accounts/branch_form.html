@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{% if branch %}Edit branch{% else %}Add branch{% endif %}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>{% if branch %}Edit branch{% else %}Add branch{% endif %}</h1></div></div>
+<form method="post" class="card card-body stack narrow" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <div class="form-grid"><div>{% field form.name %}</div><div>{% field form.code %}</div></div>
+  {% field form.address %}
+  {% field form.phone %}
+  {% if show_active %}{% field form.active %}{% endif %}
+  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'accounts:branch_list' %}">Cancel</a><button class="btn" type="submit">{% if branch %}Save changes{% else %}Add branch{% endif %}</button></div>
+</form>
+{% endblock %}

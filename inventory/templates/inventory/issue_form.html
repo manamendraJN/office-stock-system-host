@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Issue items{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Issue items</h1></div></div>
+<form method="post" class="card card-body stack medium" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <div class="form-grid">
+    <div>{% field form.recipient %}</div><div>{% field form.department %}</div>
+    <div>{% field form.issue_date %}</div><div>{% field form.purpose %}</div>
+  </div>
+  {% include "inventory/_lines.html" with mode="simple" %}
+  {% if nothing_in_stock %}<div class="alert alert-info" style="margin:0">Nothing is in stock yet. Receive a purchase first, then items can be issued.</div>{% endif %}
+  <p class="small muted" style="margin:0">Issuing reduces stock straight away. If you make a mistake, cancel the issue from its details and the stock goes back.</p>
+  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'inventory:issue_list' %}">Cancel</a><button class="btn" type="submit">Issue items</button></div>
+</form>
+{% endblock %}

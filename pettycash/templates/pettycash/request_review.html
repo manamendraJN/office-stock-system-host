@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Review {{ r.number }}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Review {{ r.number }}</h1><p>{{ r.branch.name }}</p></div></div>
+<form method="post" class="card card-body stack narrow" novalidate data-pc-review>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  {% if own_request %}<div class="alert alert-warning" role="alert">You raised this request yourself, so another manager has to review it.</div>{% endif %}
+  <dl class="facts">
+    <div><dt>Requested by</dt><dd>{{ r.requested_by.name }}</dd></div>
+    <div><dt>Amount requested</dt><dd><b>{{ r.amount_requested|money }}</b></dd></div>
+    <div><dt>They hold now</dt><dd>{{ balance|money }}{% if balance <= low_level %} {% badge "Low" "red" %}{% endif %}</dd></div>
+  </dl>
+  {% if r.purpose %}<p class="notice" style="margin:0"><b>For:</b> {{ r.purpose }}</p>{% endif %}
+
+  <fieldset style="border:0;padding:0;margin:0">
+    <legend style="font-size:.875rem;font-weight:500;color:var(--s700);margin-bottom:.375rem">Your decision</legend>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+      {% for value, label in form.fields.decision.choices %}
+      <label class="check" style="flex:1;border:1px solid var(--s300);border-radius:8px;padding:.5rem .75rem"><input type="radio" name="decision" value="{{ value }}" data-pc-decision {% if form.decision.value == value %}checked{% endif %}> {{ label }}</label>
+      {% endfor %}
+    </div>
+    {% for e in form.decision.errors %}<div class="err" role="alert">{{ e }}</div>{% endfor %}
+  </fieldset>
+  <div data-pc-amount>{% field form.amount %}</div>
+  {% field form.note %}
+  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'pettycash:request_detail' r.pk %}">Back</a><button class="btn" type="submit" data-pc-submit>Approve</button></div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var form = document.querySelector('[data-pc-review]'), btn = form.querySelector('[data-pc-submit]'), amt = form.querySelector('[data-pc-amount]');
+  function refresh() {
+    var reject = form.querySelector('[data-pc-decision]:checked') && form.querySelector('[data-pc-decision]:checked').value === 'reject';
+    amt.style.display = reject ? 'none' : '';
+    btn.textContent = reject ? 'Reject request' : 'Approve and give the money';
+    btn.className = reject ? 'btn btn-danger' : 'btn';
+  }
+  form.addEventListener('change', refresh); refresh();
+})();
+</script>
+{% endblock %}

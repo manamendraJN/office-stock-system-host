@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Categories{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Categories</h1><p>Groups for your items</p></div><a class="btn btn-secondary" href="{% url 'catalog:item_list' %}">Back to items</a></div>
+<div class="card narrow" style="max-width:40rem">
+  <div class="card-body stack">
+    <form method="post" style="display:flex;gap:.5rem;align-items:flex-start" novalidate>
+      {% csrf_token %}<input type="hidden" name="do" value="add">
+      <div style="flex:1">
+        <input type="text" name="new-name" value="{{ add_form.name.value|default:'' }}" placeholder="New category name" aria-label="New category name">
+        {% for e in add_form.name.errors %}<div class="err small" style="color:var(--red-600)">{{ e }}</div>{% endfor %}
+      </div>
+      <button class="btn" type="submit">Add</button>
+    </form>
+    <ul class="rows" style="border:1px solid var(--s200);border-radius:8px;padding:0 1rem">
+      {% for c in categories %}
+      <li>
+        <div><b>{{ c.name }}</b><div class="small muted">{{ c.item_count|plural:"item" }}</div></div>
+        <div class="actions">
+          <form method="post" action="{% url 'catalog:category_rename' c.pk %}" style="display:flex;gap:.25rem">
+            {% csrf_token %}<input type="text" name="name" value="{{ c.name }}" aria-label="Category name" style="width:11rem"><button class="btn btn-ghost btn-sm" type="submit">Rename</button>
+          </form>
+          <form method="post" action="{% url 'catalog:category_delete' c.pk %}" class="inline" data-confirm="Delete the category &quot;{{ c.name }}&quot;?">
+            {% csrf_token %}<button class="btn btn-ghost btn-sm" style="color:var(--red-600)" type="submit">Delete</button></form>
+        </div>
+      </li>
+      {% empty %}<li style="justify-content:center" class="muted">No categories yet</li>{% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

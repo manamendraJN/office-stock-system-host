@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Correct stock{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Correct stock</h1></div></div>
+<form method="post" class="card card-body stack narrow" novalidate data-correction>
+  {% csrf_token %}
+  <input type="hidden" name="branch" value="{{ branch.pk }}">
+  {% if form.non_field_errors %}<div class="alert alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <p class="notice" style="margin:0">Correcting stock at <b>{{ branch.name }}</b>. Use this for a stock count difference, damaged or expired goods, or stock you found.</p>
+
+  <div class="field">
+    <label class="lbl" for="id_item">Item</label>
+    <select name="item" id="id_item" data-corr-item>
+      <option value="">Choose item…</option>
+      {% for r in rows %}<option value="{{ r.item.pk }}" data-unit="{{ r.item.unit }}" data-qty="{{ r.quantity }}" {% if form.item.value|stringformat:"s" == r.item.pk|stringformat:"s" %}selected{% endif %}>{{ r.item.name }} ({{ r.item.code }}) · {{ r.quantity }} in stock</option>{% endfor %}
+    </select>
+    {% for e in form.item.errors %}<div class="err" role="alert">{{ e }}</div>{% endfor %}
+  </div>
+
+  <fieldset style="border:0;padding:0;margin:0">
+    <legend style="font-size:.875rem;font-weight:500;color:var(--s700);margin-bottom:.375rem">What changed</legend>
+    <div style="display:flex;gap:.75rem">
+      <label class="check" style="flex:1;border:1px solid var(--s300);border-radius:8px;padding:.5rem .75rem"><input type="radio" name="direction" value="add" data-corr-dir {% if form.direction.value != 'remove' %}checked{% endif %}> Add stock</label>
+      <label class="check" style="flex:1;border:1px solid var(--s300);border-radius:8px;padding:.5rem .75rem"><input type="radio" name="direction" value="remove" data-corr-dir {% if form.direction.value == 'remove' %}checked{% endif %}> Remove stock</label>
+    </div>
+    {% for e in form.direction.errors %}<div class="err" role="alert" style="color:var(--red-600);font-size:.875rem">{{ e }}</div>{% endfor %}
+  </fieldset>
+
+  <div class="form-grid">
+    <div class="field"><label class="lbl" for="id_quantity">Quantity <span data-corr-unit></span></label>{{ form.quantity }}
+      {% for e in form.quantity.errors %}<div class="err" role="alert">{{ e }}</div>{% endfor %}</div>
+    <div class="field"><label class="lbl" for="id_reason">Reason</label>
+      <select name="reason" id="id_reason" data-corr-reason data-selected="{{ form.reason.value|default:'' }}">{% for v, l in form.fields.reason.choices %}<option value="{{ v }}" {% if form.reason.value == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+      {% for e in form.reason.errors %}<div class="err" role="alert">{{ e }}</div>{% endfor %}</div>
+  </div>
+  <div class="field"><label class="lbl" for="id_note" data-corr-note-label>Note (optional)</label>{{ form.note }}
+    {% for e in form.note.errors %}<div class="err" role="alert">{{ e }}</div>{% endfor %}</div>
+  <p class="small muted" style="margin:0" data-corr-preview></p>
+  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'inventory:stock' %}?branch={{ branch.pk }}">Cancel</a><button class="btn" type="submit">Save correction</button></div>
+</form>
+<script type="application/json" id="reasons-data">{"for": {{ reasons_for_json|safe }}, "labels": {{ reason_labels_json|safe }}}</script>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var data = JSON.parse(document.getElementById('reasons-data').textContent);
+  var form = document.querySelector('[data-correction]');
+  var item = form.querySelector('[data-corr-item]'), qty = form.querySelector('[name=quantity]');
+  var reason = form.querySelector('[data-corr-reason]'), unit = form.querySelector('[data-corr-unit]');
+  var preview = form.querySelector('[data-corr-preview]'), noteLabel = form.querySelector('[data-corr-note-label]');
+  function dir() { var c = form.querySelector('[data-corr-dir]:checked'); return c ? c.value : 'add'; }
+  function fillReasons() {
+    var keep = reason.value || reason.getAttribute('data-selected') || '';
+    reason.innerHTML = '<option value="">Choose…</option>';
+    (data['for'][dir()] || []).forEach(function (r) {
+      var o = document.createElement('option'); o.value = r; o.textContent = data.labels[r]; if (r === keep) o.selected = true; reason.appendChild(o);
+    });
+    reason.setAttribute('data-selected', '');
+  }
+  function refresh() {
+    var o = item.selectedOptions[0], have = o && o.value ? parseInt(o.getAttribute('data-qty'), 10) : null;
+    unit.textContent = o && o.value ? '(' + o.getAttribute('data-unit') + ')' : '';
+    noteLabel.textContent = reason.value === 'other' ? 'Note (required)' : 'Note (optional)';
+    var n = parseInt(qty.value, 10) || 0;
+    if (have === null || n <= 0) { preview.textContent = ''; return; }
+    var after = have + (dir() === 'remove' ? -n : n);
+    preview.style.color = after < 0 ? 'var(--red-600)' : '';
+    preview.textContent = after < 0 ? 'Only ' + have + ' in stock, so ' + n + ' cannot be removed.' : 'Stock will change from ' + have + ' to ' + after + '.';
+  }
+  form.addEventListener('change', function (e) { if (e.target.matches('[data-corr-dir]')) fillReasons(); refresh(); });
+  form.addEventListener('input', refresh);
+  fillReasons(); refresh();
+})();
+</script>
+{% endblock %}

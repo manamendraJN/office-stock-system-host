@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{% if editing %}Edit user{% else %}Add user{% endif %}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>{% if editing %}Edit user{% else %}Add user{% endif %}</h1></div></div>
+<form method="post" class="card card-body stack medium" autocomplete="off" novalidate data-user-form>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  {% field form.name %}
+  {% field form.email %}
+  <div class="form-grid">
+    <div class="field">
+      <label class="lbl" for="id_role">Role</label>
+      <select name="role" id="id_role" data-role-select>
+        <option value="">Choose…</option>
+        {% for r in roles %}<option value="{{ r.key }}" {% if r.key == current_role %}selected{% endif %}>{{ r.name }}</option>{% endfor %}
+        {% if role_missing %}<option value="{{ current_role }}" selected>{{ current_role }} (no longer exists)</option>{% endif %}
+      </select>
+      <div class="hint" data-role-hint>Choosing a role ticks a typical set of features below</div>
+      {% for e in role_error %}<div class="err" role="alert">{{ e }}</div>{% endfor %}
+    </div>
+    <div class="field">
+      <label class="lbl" for="id_branch">Branch</label>
+      <select name="branch" id="id_branch" data-branch-select>
+        <option value="">Choose…</option>
+        {% for b in branches %}<option value="{{ b.id }}" data-type="{{ b.type }}" {% if b.id|stringformat:"s" == current_branch %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+      </select>
+      <div class="hint hidden" data-branch-hint>Branch-side users must be assigned to a branch.</div>
+      {% for e in branch_error %}<div class="err" role="alert">{{ e }}</div>{% endfor %}
+    </div>
+  </div>
+  {% include "core/_permission_picker.html" with legend="What this user can do" locked="A Super Admin always has full access to everything, so there is nothing to tick." waiting="Choose a role first. It ticks a typical set of features, which you can then change." empty_note="Nothing is ticked, so this user will only see the Dashboard." %}
+  {% if not editing %}{% field form.password %}{% endif %}
+  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'accounts:user_list' %}">Cancel</a><button class="btn" type="submit">{% if editing %}Save changes{% else %}Create user{% endif %}</button></div>
+</form>
+{{ roles|json_script:"roles-data" }}
+{% endblock %}

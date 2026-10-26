@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Audit Log{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Audit Log</h1><p>Who did what, and when.</p></div>
+  <div class="actions">
+    {% if logging_on %}{% badge "Logging on" "green" %}{% else %}{% badge "Logging stopped" "gray" %}{% endif %}
+    <form method="post" action="{% url 'core:settings' %}" class="inline" {% if logging_on %}data-confirm="Stop audit logging? Actions will continue, but will not be recorded until logging is resumed."{% endif %}>
+      {% csrf_token %}<input type="hidden" name="action" value="audit_toggle">
+      <button class="btn {% if logging_on %}btn-secondary{% endif %}" type="submit">{% if logging_on %}Stop logging{% else %}Resume logging{% endif %}</button>
+    </form>
+  </div>
+</div>
+
+<form method="get" class="grid grid-4" style="margin-bottom:1rem" data-audit-filters>
+  <select name="user" aria-label="Person">
+    <option value="">Everyone</option>
+    {% for u in users %}<option value="{{ u.pk }}" {% if f.user == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.name }}</option>{% endfor %}
+  </select>
+  <select name="area" aria-label="Area">
+    <option value="">All areas</option>
+    {% for key, label in areas %}<option value="{{ key }}" {% if f.area == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <input type="date" name="from" value="{{ f.from }}" aria-label="From date">
+  <input type="date" name="to" value="{{ f.to }}" aria-label="To date">
+</form>
+
+<div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
+  <form method="post" action="{% url 'core:audit_clear' %}"
+        data-confirm="Permanently clear all audit entries from {{ f.from }} through {{ f.to }}? This includes every person and area, regardless of the other filters.">
+    {% csrf_token %}<input type="hidden" name="from" value="{{ f.from }}"><input type="hidden" name="to" value="{{ f.to }}">
+    <button class="btn btn-danger" type="submit" {% if not f.from or not f.to or problem %}disabled{% endif %}>Clear entries in date range</button>
+  </form>
+</div>
+
+{% if problem %}
+  <div class="alert alert-error" role="alert">{{ problem }}</div>
+{% elif not entries %}
+  <div class="card empty">
+    <h3>{% if filters_on %}No entries match your filters{% else %}Nothing recorded yet{% endif %}</h3>
+    <p>{% if filters_on %}Try clearing the filters.{% else %}Every sign-in and change made in the system will appear here.{% endif %}</p>
+  </div>
+{% else %}
+<div class="card table-wrap">
+  <table class="data">
+    <thead><tr><th>When</th><th>Who</th><th>What</th><th>Record</th><th>From</th><th><span class="sr-only">Details</span></th></tr></thead>
+    <tbody>
+    {% for r in entries %}
+      <tr style="vertical-align:top">
+        <td class="nowrap muted">{{ r.e.created_at|fdatetime }}</td>
+        <td><b>{{ r.e.user.name|default:"Unknown user" }}</b>{% if r.e.user.email %}<div class="small muted">{{ r.e.user.email }}</div>{% endif %}</td>
+        <td>{% badge r.e.action|action_name r.e.action|action_color %}</td>
+        <td class="muted">{{ r.e.record_type }}</td>
+        <td class="nowrap mono small muted">{{ r.e.ip }}</td>
+        <td class="right">{% if r.has_values %}<button type="button" class="btn btn-ghost btn-sm" data-toggle-row="audit-{{ r.e.pk }}">Details</button>{% endif %}</td>
+      </tr>
+      {% if r.has_values %}
+      <tr id="audit-{{ r.e.pk }}" class="hidden" style="background:var(--s50)"><td colspan="6">
+        <div class="grid grid-2">
+          {% if r.old %}<div><div class="small muted" style="text-transform:uppercase;font-weight:600">Before</div><pre class="small" style="max-height:16rem;overflow:auto;background:#fff;padding:.75rem;border-radius:8px;border:1px solid var(--s200)">{{ r.old }}</pre></div>{% endif %}
+          {% if r.new %}<div><div class="small muted" style="text-transform:uppercase;font-weight:600">{% if r.old %}After{% else %}Details{% endif %}</div><pre class="small" style="max-height:16rem;overflow:auto;background:#fff;padding:.75rem;border-radius:8px;border:1px solid var(--s200)">{{ r.new }}</pre></div>{% endif %}
+        </div>
+        <div class="small muted" style="margin-top:.5rem">Action code <span class="mono">{{ r.e.action }}</span>{% if r.e.record_type %} · {{ r.e.record_type }} <span class="mono">{{ r.e.record_id }}</span>{% endif %}</div>
+      </td></tr>
+      {% endif %}
+    {% endfor %}
+    </tbody>
+  </table>
+  {% pagination page pages total "entries" %}
+</div>
+{% endif %}
+{% endblock %}

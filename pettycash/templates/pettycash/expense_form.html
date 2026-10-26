@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Record spending{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Record spending</h1></div></div>
+<form method="post" class="card card-body stack narrow" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <p class="notice" style="margin:0">Available petty cash: <b>{{ balance|money }}</b>. Use this when you spend petty cash, for example buying inventory items.</p>
+  {% field form.amount %}
+  {% field form.description %}
+  {% field form.entry_date %}
+  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'pettycash:overview' %}">Cancel</a><button class="btn" type="submit">Save</button></div>
+</form>
+{% endblock %}

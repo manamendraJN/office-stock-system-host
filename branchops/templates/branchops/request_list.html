@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Requests{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Requests</h1><p>{% if show_branch %}What the branches have asked the main office for{% else %}Ask the main office for the items your branch needs{% endif %}</p></div>
+  {% if can_raise %}<a class="btn" href="{% url 'branchops:request_create' %}">{% icon 'plus' 'icon icon-sm' %} New request</a>{% endif %}
+</div>
+<form method="get" class="card" style="margin-bottom:1rem"><div class="filters">
+  <div class="field grow"><input type="search" name="q" value="{{ f.q }}" placeholder="Search request number" aria-label="Search requests"></div>
+  <div class="field"><select name="status" aria-label="Status" onchange="this.form.submit()"><option value="">All statuses</option>
+    {% for value, s in statuses.items %}<option value="{{ value }}" {% if f.status == value %}selected{% endif %}>{{ s.label }}</option>{% endfor %}</select></div>
+  <button class="btn btn-secondary" type="submit">Search</button>
+</div></form>
+{% if not rows %}
+  <div class="card empty"><h3>{% if filters_on %}No requests match your filters{% else %}No requests yet{% endif %}</h3>
+  <p>{% if filters_on %}Try clearing the search or filter.{% elif can_raise %}Ask the main office for items your branch needs.{% else %}Requests from branches appear here.{% endif %}</p>
+  {% if not filters_on and can_raise %}<p><a class="btn" href="{% url 'branchops:request_create' %}">Make the first request</a></p>{% endif %}</div>
+{% else %}
+<div class="card table-wrap"><table class="data">
+  <thead><tr><th>Number</th><th>Date</th>{% if show_branch %}<th>Branch</th>{% endif %}<th class="num">Requested</th><th class="num">Approved</th><th class="num">Sent</th><th>Status</th></tr></thead>
+  <tbody>{% for x in rows %}
+    <tr><td class="nowrap mono small"><a href="{% url 'branchops:request_detail' x.r.pk %}"><b>{{ x.r.number }}</b></a></td>
+    <td class="nowrap muted">{{ x.r.created_at|fdate }}</td>
+    {% if show_branch %}<td><b>{{ x.r.branch.name }}</b></td>{% endif %}
+    <td class="num muted">{{ x.total_requested }}</td>
+    <td class="num muted">{% if x.r.status == 'submitted' %}–{% else %}{{ x.total_approved }}{% endif %}</td>
+    <td class="num muted">{{ x.total_dispatched }}</td>
+    <td>{% status_badge 'request' x.r.status %}</td></tr>
+  {% endfor %}</tbody>
+</table></div>
+{% endif %}
+{% endblock %}

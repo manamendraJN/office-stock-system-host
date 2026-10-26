@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{{ d.reference }}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>{{ d.reference }}</h1><p>{% status_badge 'dispatch' d.status %}</p></div>
+  <a class="btn btn-secondary" href="{% url 'branchops:dispatch_list' %}">Back to dispatches</a></div>
+<div class="card"><div class="card-body stack">
+  <dl class="facts">
+    <div><dt>Sent to</dt><dd><b>{{ d.destination.name }}</b></dd></div>
+    <div><dt>Status</dt><dd>{% status_badge 'dispatch' d.status %}</dd></div>
+    <div><dt>Date sent</dt><dd>{{ d.dispatch_date|fdate }}</dd></div>
+    <div><dt>Request</dt><dd>{% if d.request %}<a href="{% url 'branchops:request_detail' d.request.pk %}">{{ d.request.number }}</a>{% else %}None (sent directly){% endif %}</dd></div>
+    <div><dt>Sent by</dt><dd>{{ d.dispatched_by.name }}</dd></div>
+    {% if d.received_by %}<div><dt>Received by</dt><dd>{{ d.received_by.name }}{% if d.received_at %} · {{ d.received_at|fdate }}{% endif %}</dd></div>{% endif %}
+  </dl>
+  <div class="table-wrap" style="border:1px solid var(--s200);border-radius:8px"><table class="data">
+    <thead><tr><th>Item</th><th class="num">Sent</th>{% if show_result %}<th class="num">Received</th><th class="num">Damaged</th><th class="num">Missing</th>{% endif %}</tr></thead>
+    <tbody>{% for l in lines %}
+      <tr><td><b>{{ l.item.name }}</b><div class="mono small muted">{{ l.item.code }}</div></td>
+      <td class="num nowrap">{{ l.quantity_sent }} <span class="muted">{{ l.item.unit }}</span></td>
+      {% if show_result %}<td class="num">{{ l.quantity_received }}</td><td class="num">{{ l.quantity_damaged }}</td><td class="num">{{ l.quantity_short }}</td>{% endif %}</tr>{% endfor %}</tbody>
+  </table></div>
+  {% if d.status == 'in_transit' and not can_confirm %}<p class="small muted" style="margin:0">The branch confirms what arrived when the items get there.</p>{% endif %}
+  {% if d.status == 'received_with_differences' and not can_close %}<p class="small muted" style="margin:0">{{ differences|plural:"unit" }} damaged or missing. The main office will settle this.</p>{% endif %}
+  <div class="form-actions" style="justify-content:flex-start">
+    {% if can_confirm %}<a class="btn" href="{% url 'branchops:dispatch_receive' d.pk %}">Confirm receipt</a>{% endif %}
+    {% if can_close %}<a class="btn" href="{% url 'branchops:dispatch_close' d.pk %}">Settle differences</a>{% endif %}
+  </div>
+</div></div>
+{% endblock %}

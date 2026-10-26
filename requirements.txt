@@ -1,0 +1,5 @@
+Django>=5.2.18,<5.3
+whitenoise>=6.6,<7
+gunicorn>=26.0,<27
+# Only needed when DB_ENGINE=postgres
+psycopg[binary]>=3.1,<4

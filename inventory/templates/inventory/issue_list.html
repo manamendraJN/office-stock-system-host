@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Office Issues{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Office Issues</h1><p>{% if branch_side %}Items handed to staff from your branch stock{% else %}Items handed to office staff from the main office stock{% endif %}</p></div>
+  {% if can_issue %}<a class="btn" href="{% url 'inventory:issue_create' %}">{% icon 'plus' 'icon icon-sm' %} Issue items</a>{% endif %}
+</div>
+<form method="get" class="card" style="margin-bottom:1rem"><div class="filters">
+  <div class="field grow"><input type="search" name="q" value="{{ f.q }}" placeholder="Search number, person or department" aria-label="Search issues"></div>
+  <div class="field"><select name="status" aria-label="Status" onchange="this.form.submit()"><option value="">All statuses</option>
+    {% for value, s in statuses.items %}<option value="{{ value }}" {% if f.status == value %}selected{% endif %}>{{ s.label }}</option>{% endfor %}</select></div>
+  <div class="field"><input type="date" name="from" value="{{ f.from }}" aria-label="From date" onchange="this.form.submit()"></div>
+  <div class="field"><input type="date" name="to" value="{{ f.to }}" aria-label="To date" onchange="this.form.submit()"></div>
+  <button class="btn btn-secondary" type="submit">Search</button>
+</div></form>
+{% if problem %}<div class="alert alert-error" role="alert">{{ problem }}</div>{% endif %}
+{% if not rows %}
+  <div class="card empty"><h3>{% if filters_on %}No issues match your filters{% else %}Nothing issued yet{% endif %}</h3>
+  <p>{% if filters_on %}Try clearing the search or filters.{% else %}Record items you hand to staff here. Stock goes down as soon as you issue them.{% endif %}</p>
+  {% if not filters_on and can_issue %}<p><a class="btn" href="{% url 'inventory:issue_create' %}">Issue the first items</a></p>{% endif %}</div>
+{% else %}
+<div class="card table-wrap"><table class="data">
+  <thead><tr><th>Number</th><th>Date</th>{% if show_branch %}<th>Branch</th>{% endif %}<th>Given to</th><th>Department</th><th class="num">Units</th><th>Status</th></tr></thead>
+  <tbody>{% for r in rows %}
+    <tr><td class="nowrap mono small"><a href="{% url 'inventory:issue_detail' r.i.pk %}"><b>{{ r.i.number }}</b></a></td>
+    <td class="nowrap muted">{{ r.i.issue_date|fdate }}</td>
+    {% if show_branch %}<td class="muted">{{ r.i.branch.name|default:"Main office" }}</td>{% endif %}
+    <td><b>{{ r.i.recipient }}</b></td><td class="muted">{{ r.i.department }}</td><td class="num nowrap muted">{{ r.units }}</td>
+    <td>{% status_badge 'issue' r.i.status %}</td></tr>
+  {% endfor %}</tbody>
+</table></div>
+<p class="small muted right" style="margin-top:.75rem">{{ rows|length|plural:"issue" }} shown</p>
+{% endif %}
+{% endblock %}

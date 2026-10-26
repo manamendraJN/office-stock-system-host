@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{% if role %}Edit role{% else %}Add role{% endif %}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>{% if role %}Edit role{% else %}Add role{% endif %}</h1></div></div>
+<form method="post" class="card card-body stack medium" autocomplete="off" novalidate data-role-form data-original-perms='{{ role_perms_json }}'>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  {% field form.name %}
+  {% field form.description %}
+  {% if side_locked %}
+    {% field form.side hint=side_hint %}
+  {% else %}
+    {% field form.side hint="Main office users work with the main office stock. Branch users work with only their own branch's stock. Both can be given any features" %}
+  {% endif %}
+  {% include "core/_permission_picker.html" with legend="Typical features for this role" locked="" waiting="Choose where this role works first. Then tick the features it normally needs." empty_note="Nothing is ticked, so users with this role will start with no access." %}
+  {% if role and user_count %}
+  <label class="notice hidden" style="background:var(--amber-50);color:#78350f;display:flex;gap:.5rem;align-items:flex-start" data-apply-box>
+    <input type="checkbox" name="apply_to_users" value="1" style="margin-top:.2rem">
+    <span>Also give these ticks to the {{ user_count|plural:"user" }} who already {% if user_count == 1 %}has{% else %}have{% endif %} this role.
+      <span class="small" style="display:block">If left unticked, they keep the features set on their own account.</span></span>
+  </label>
+  {% endif %}
+  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'accounts:role_list' %}">Cancel</a><button class="btn" type="submit">{% if role %}Save changes{% else %}Create role{% endif %}</button></div>
+</form>
+{% endblock %}

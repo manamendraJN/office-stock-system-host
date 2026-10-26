@@ -1,0 +1,18 @@
+{% extends "base_auth.html" %}
+{% load ui %}
+{% block content %}
+<div style="text-align:center;margin-bottom:2rem">
+  <div class="brand-mark">{% icon 'box' 'icon' %}</div>
+  <h1 style="font-size:1.5rem">Office Stock</h1>
+  <p class="muted small" style="margin:.25rem 0 0">Sign in to continue</p>
+</div>
+<form method="post" class="card card-body stack" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+  {% if form.non_field_errors %}<div class="alert alert-error" role="alert" style="margin:0">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  {% for m in messages %}<div class="alert alert-{{ m.tags|default:'info' }}" style="margin:0">{{ m }}</div>{% endfor %}
+  {% field form.email %}
+  {% field form.password %}
+  <button class="btn btn-block" type="submit">Sign in</button>
+</form>
+{% endblock %}

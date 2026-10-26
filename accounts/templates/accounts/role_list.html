@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Roles{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Roles</h1><p>Names for the kinds of people who use the system, each with a typical set of features</p></div>
+  <a class="btn" href="{% url 'accounts:role_create' %}">{% icon 'plus' 'icon icon-sm' %} Add role</a>
+</div>
+<div class="card table-wrap">
+  <table class="data">
+    <thead><tr><th>Role</th><th>Works at</th><th>Features</th><th>Users</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><b>{{ r.name }}</b>{% if r.built_in %} {% badge "Built in" "blue" %}{% endif %}{% if r.description %}<div class="small muted">{{ r.description }}</div>{% endif %}</td>
+        <td class="nowrap muted">{{ r.side_label }}</td>
+        <td class="nowrap muted">{% if r.built_in %}Full access{% else %}{{ r.perm_count|plural:"feature" }}{% endif %}</td>
+        <td class="muted">{{ r.user_count }}</td>
+        <td class="right nowrap">
+          {% if r.built_in %}<span class="small muted">Cannot be changed</span>{% else %}
+          <a class="btn btn-ghost btn-sm" href="{% url 'accounts:role_edit' r.id %}">Edit</a>
+          <form method="post" action="{% url 'accounts:role_delete' r.id %}" class="inline" data-confirm="Delete the role &quot;{{ r.name }}&quot;? This cannot be undone.">
+            {% csrf_token %}<button class="btn btn-ghost btn-sm" style="color:var(--red-600)" type="submit">Delete</button></form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="small muted" style="margin-top:1rem">Choosing a role for a user ticks that role's typical features. The Super Admin can then tick or untick anything for that one user. A role can only be deleted when no user has it.</p>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{{ r.number }}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>{{ r.number }}</h1><p>{% status_badge 'petty_cash' r.status %}</p></div>
+  <a class="btn btn-secondary" href="{% url 'pettycash:request_list' %}">Back to requests</a></div>
+<div class="card"><div class="card-body stack">
+  <dl class="facts">
+    <div><dt>Branch</dt><dd><b>{{ r.branch.name }}</b></dd></div>
+    <div><dt>Status</dt><dd>{% status_badge 'petty_cash' r.status %}</dd></div>
+    <div><dt>Requested by</dt><dd>{{ r.requested_by.name }}</dd></div>
+    <div><dt>Date</dt><dd>{{ r.created_at|fdate }}</dd></div>
+    <div><dt>Amount requested</dt><dd><b>{{ r.amount_requested|money }}</b></dd></div>
+    {% if r.status == 'approved' %}<div><dt>Amount given</dt><dd><b>{{ r.amount_approved|money }}</b></dd></div>{% endif %}
+    {% if r.reviewed_by %}<div><dt>Reviewed by</dt><dd>{{ r.reviewed_by.name }}<div class="small muted">{{ r.reviewed_at|fdatetime }}</div></dd></div>{% endif %}
+  </dl>
+  {% if r.purpose %}<p class="notice" style="margin:0"><b>For:</b> {{ r.purpose }}</p>{% endif %}
+  {% if r.review_note %}<p class="notice" style="margin:0"><b>Manager’s note:</b> {{ r.review_note }}</p>{% endif %}
+  <div class="form-actions" style="justify-content:flex-start;flex-wrap:wrap">
+    {% if can_review %}<a class="btn" href="{% url 'pettycash:request_review' r.pk %}">Review request</a>{% endif %}
+    {% if can_cancel %}
+    <form method="post" action="{% url 'pettycash:request_cancel' r.pk %}" data-confirm="Cancel {{ r.number }}? It stays on record but no money will be given.">{% csrf_token %}
+      <button class="btn btn-danger" type="submit">Cancel request</button></form>
+    {% endif %}
+  </div>
+</div></div>
+{% endblock %}

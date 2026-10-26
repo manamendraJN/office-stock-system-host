@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{{ p.number }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>{{ p.number }}</h1><p>{% status_badge 'purchase' p.status %}</p></div>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{% url 'inventory:purchase_list' %}">Back to purchases</a>
+    {% if can_manage and open and not has_receipts %}
+      <a class="btn btn-secondary" href="{% url 'inventory:purchase_edit' p.pk %}">Edit</a>
+      <form method="post" action="{% url 'inventory:purchase_cancel' p.pk %}" class="inline" data-confirm="Cancel {{ p.number }}? It stays on record but can no longer be received.">
+        {% csrf_token %}<button class="btn btn-danger-outline" type="submit">Cancel purchase</button></form>
+    {% endif %}
+    {% if can_receive and open %}<a class="btn" href="{% url 'inventory:purchase_receive' p.pk %}">Receive items</a>{% endif %}
+  </div>
+</div>
+<div class="card"><div class="card-body stack">
+  <dl class="facts">
+    <div><dt>Supplier</dt><dd><b>{{ p.supplier.name }}</b></dd></div>
+    <div><dt>Status</dt><dd>{% status_badge 'purchase' p.status %}</dd></div>
+    <div><dt>Purchase date</dt><dd>{{ p.purchase_date|fdate }}</dd></div>
+    <div><dt>Invoice / bill</dt><dd>{{ p.invoice_ref|default:"–" }}</dd></div>
+    <div><dt>Recorded by</dt><dd>{{ p.created_by.name }}</dd></div>
+    <div><dt>Total</dt><dd><b>{{ total|money }}</b></dd></div>
+    {% if show_branch_name %}<div><dt>Stock goes to</dt><dd>{{ p.branch.name|default:"Main office" }}</dd></div>{% endif %}
+  </dl>
+  {% if p.notes %}<p class="notice" style="margin:0">{{ p.notes }}</p>{% endif %}
+  <div class="table-wrap" style="border:1px solid var(--s200);border-radius:8px"><table class="data">
+    <thead><tr><th>Item</th><th class="num">Ordered</th><th class="num">Received</th><th class="num">Unit cost</th></tr></thead>
+    <tbody>{% for l in lines %}
+      <tr><td><b>{{ l.item.name }}</b><div class="mono small muted">{{ l.item.code }}</div></td>
+      <td class="num nowrap">{{ l.quantity_ordered }} <span class="muted">{{ l.item.unit }}</span></td>
+      <td class="num nowrap">{{ l.quantity_received }}</td><td class="num nowrap">{{ l.unit_cost|money }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% if cancelled %}<p class="small muted" style="margin:0">This purchase was cancelled and added no stock.</p>{% endif %}
+  {% if open and has_receipts %}<p class="small muted" style="margin:0">Some items have been received, so this purchase can no longer be edited or cancelled.</p>{% endif %}
+</div></div>
+{% endblock %}

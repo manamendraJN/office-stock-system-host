@@ -1,0 +1,25 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Sign in{% endblock %} · Office Stock</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/premium.css' %}">
+  <script src="{% static 'js/motion-bootstrap.js' %}"></script>
+</head>
+<body class="auth">
+<div class="ambient" aria-hidden="true">
+  <span class="blob b1" data-parallax="0.10" data-mouse="26"><i></i></span>
+  <span class="blob b2" data-parallax="-0.07" data-mouse="-34"><i></i></span>
+  <span class="blob b3" data-parallax="0.05" data-mouse="18"><i></i></span>
+  <svg class="airflow" viewBox="0 0 1440 900" preserveAspectRatio="none">
+    <path d="M-40 220 C 260 120, 420 340, 720 230 S 1200 120, 1480 260"/>
+    <path d="M-40 520 C 240 430, 480 640, 760 520 S 1180 430, 1480 560"/>
+    <path d="M-40 780 C 300 700, 520 860, 820 770 S 1220 690, 1480 800"/>
+  </svg>
+</div>
+<div class="auth-wrap"><div class="auth-box">{% block content %}{% endblock %}</div></div>
+<script src="{% static 'js/motion.js' %}"></script>
+</body>
+</html>

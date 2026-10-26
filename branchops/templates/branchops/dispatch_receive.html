@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Confirm receipt {{ d.reference }}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Confirm receipt: {{ d.reference }}</h1></div></div>
+<form method="post" class="card card-body stack medium" novalidate data-receive data-confirm="Confirm what arrived? It will be added to your branch stock.">
+  {% csrf_token %}
+  <div class="alert alert-info" style="margin:0">Enter what actually arrived. Anything not received or damaged is counted as missing.</div>
+  <div class="table-wrap" style="border:1px solid var(--s200);border-radius:8px"><table class="data">
+    <thead><tr><th>Item</th><th class="num">Sent</th><th class="num">Received</th><th class="num">Damaged</th><th class="num">Missing</th></tr></thead>
+    <tbody>{% for x in rows %}
+      <tr data-row data-sent="{{ x.l.quantity_sent }}"><td><b>{{ x.l.item.name }}</b><div class="mono small muted">{{ x.l.item.code }}</div></td>
+      <td class="num nowrap">{{ x.l.quantity_sent }} <span class="muted">{{ x.l.item.unit }}</span></td>
+      <td class="num"><input type="number" name="received_{{ x.l.pk }}" min="0" max="{{ x.l.quantity_sent }}" step="1" inputmode="numeric" value="{{ x.value.received }}" style="width:5.5rem;text-align:right" aria-label="Received {{ x.l.item.name }}" data-received class="{% if x.error %}invalid{% endif %}"></td>
+      <td class="num"><input type="number" name="damaged_{{ x.l.pk }}" min="0" max="{{ x.l.quantity_sent }}" step="1" inputmode="numeric" value="{{ x.value.damaged }}" style="width:5.5rem;text-align:right" aria-label="Damaged {{ x.l.item.name }}" data-damaged></td>
+      <td class="num" data-missing>–</td></tr>
+      {% if x.error %}<tr><td colspan="5" class="err small" role="alert" style="color:var(--red-600)">{{ x.l.item.name }}: {{ x.error }}</td></tr>{% endif %}
+    {% endfor %}</tbody>
+  </table></div>
+  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'branchops:dispatch_detail' d.pk %}">Back</a><button class="btn" type="submit">Confirm receipt</button></div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var form = document.querySelector('[data-receive]');
+  function refresh() {
+    form.querySelectorAll('[data-row]').forEach(function (row) {
+      var sent = parseInt(row.getAttribute('data-sent'), 10);
+      var left = sent - (parseInt(row.querySelector('[data-received]').value, 10) || 0) - (parseInt(row.querySelector('[data-damaged]').value, 10) || 0);
+      var cell = row.querySelector('[data-missing]');
+      cell.textContent = left < 0 ? 'Too many' : left; cell.style.color = left < 0 ? 'var(--red-600)' : '';
+    });
+  }
+  form.addEventListener('input', refresh); refresh();
+})();
+</script>
+{% endblock %}

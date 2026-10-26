@@ -1,0 +1,10 @@
+{% load ui %}
+{% if pages > 1 or total %}
+<div class="pager no-print">
+  <span>{% if total is not None %}{{ total }} {{ noun }} · {% endif %}Page {{ page }} of {{ pages }}</span>
+  <span class="actions">
+    {% if page > 1 %}<a class="btn btn-secondary btn-sm" href="{% qs page=page|add:'-1' %}">Previous</a>{% endif %}
+    {% if page < pages %}<a class="btn btn-secondary btn-sm" href="{% qs page=page|add:'1' %}">Next</a>{% endif %}
+  </span>
+</div>
+{% endif %}

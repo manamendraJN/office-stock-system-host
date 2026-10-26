@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{% if purchase %}Edit {{ purchase.number }}{% else %}New purchase{% endif %}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>{% if purchase %}Edit {{ purchase.number }}{% else %}New purchase{% endif %}</h1></div></div>
+<form method="post" class="card card-body stack medium" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <div class="form-grid"><div>{% field form.supplier %}</div><div>{% field form.purchase_date %}</div></div>
+  {% field form.invoice_ref %}
+  {% include "inventory/_lines.html" with mode="purchase" %}
+  {% field form.notes %}
+  <p class="small muted" style="margin:0">Recording a purchase does not add stock. Stock is added when you press Receive after the goods arrive.</p>
+  <div class="form-actions"><a class="btn btn-secondary" href="{% if purchase %}{% url 'inventory:purchase_detail' purchase.pk %}{% else %}{% url 'inventory:purchase_list' %}{% endif %}">Cancel</a>
+    <button class="btn" type="submit">{% if purchase %}Save changes{% else %}Record purchase{% endif %}</button></div>
+</form>
+{% endblock %}

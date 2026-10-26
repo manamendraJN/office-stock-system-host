@@ -1,0 +1,18 @@
+{% load ui %}
+{# the whole line-items editor. needs: rows, items, mode, line_error; optional show_stock #}
+<div data-lines>
+  <div style="font-size:.875rem;font-weight:500;color:var(--s700);margin-bottom:.375rem">Items</div>
+  {% if line_error %}<div class="err" role="alert" style="color:var(--red-600);font-size:.875rem;margin-bottom:.5rem">{{ line_error }}</div>{% endif %}
+  <div class="lines" data-lines-rows>
+    {% for r in rows %}{% include "inventory/_line_row.html" %}{% endfor %}
+  </div>
+  <template data-line-template>{% include "inventory/_line_row.html" with r=blank_row %}</template>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.75rem;gap:1rem">
+    <button type="button" class="btn btn-secondary" data-add-line>{% load ui %}{% icon 'plus' 'icon icon-sm' %} Add another item</button>
+    {% if mode == 'purchase' %}
+      <div style="text-align:right"><div class="small muted">Total</div><div style="font-size:1.125rem;font-weight:700;color:var(--s900)" data-lines-total>Rs. 0.00</div></div>
+    {% else %}
+      <div class="muted small"><span data-lines-units>0</span> units in total</div>
+    {% endif %}
+  </div>
+</div>

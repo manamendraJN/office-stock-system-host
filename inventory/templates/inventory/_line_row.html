@@ -1,0 +1,26 @@
+{% load ui %}
+{# one row of the line-items editor. r = {raw: {item, quantity, unit_cost}, errors: {...}}; mode = purchase | simple #}
+<div class="line" style="--cols: {% if mode == 'purchase' %}2{% else %}1{% endif %}">
+  <div>
+    <span class="cell-label">Item</span>
+    <select name="line_item" aria-label="Item" class="{% if r.errors.item %}invalid{% endif %}">
+      <option value="">Choose item…</option>
+      {% for it in items %}<option value="{{ it.pk }}" data-unit="{{ it.unit }}" data-cost="{{ it.last_unit_cost|default_if_none:'' }}" {% if r.raw.item == it.pk|stringformat:"s" %}selected{% endif %}>{{ it.name }} ({{ it.code }}){% if show_stock %} · {{ it.stock }} in stock{% endif %}</option>{% endfor %}
+    </select>
+    <div class="unit" data-unit></div>
+    {% if r.errors.item %}<div class="err" role="alert">{{ r.errors.item }}</div>{% endif %}
+  </div>
+  <div>
+    <span class="cell-label">Quantity</span>
+    <input type="number" name="line_quantity" min="1" step="1" inputmode="numeric" placeholder="Qty" aria-label="Quantity" value="{{ r.raw.quantity }}" class="{% if r.errors.quantity %}invalid{% endif %}">
+    {% if r.errors.quantity %}<div class="err" role="alert">{{ r.errors.quantity }}</div>{% endif %}
+  </div>
+  {% if mode == 'purchase' %}
+  <div>
+    <span class="cell-label">Unit cost</span>
+    <input type="number" name="line_unit_cost" min="0" step="0.01" inputmode="decimal" placeholder="Unit cost" aria-label="Unit cost" value="{{ r.raw.unit_cost }}" class="{% if r.errors.unit_cost %}invalid{% endif %}">
+    {% if r.errors.unit_cost %}<div class="err" role="alert">{{ r.errors.unit_cost }}</div>{% endif %}
+  </div>
+  {% endif %}
+  <button type="button" class="btn btn-ghost" data-remove-line aria-label="Remove line">{% load ui %}{% icon 'close' 'icon icon-sm' %}</button>
+</div>

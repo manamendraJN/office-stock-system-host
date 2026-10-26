@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Settle {{ d.reference }}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Settle differences: {{ d.reference }}</h1><p>{{ d.destination.name }}</p></div></div>
+<form method="post" class="card card-body stack narrow" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <div class="alert alert-info" style="margin:0">{{ differences|plural:"unit" }} {% if differences == 1 %}was{% else %}were{% endif %} damaged or missing on this delivery. Choose what happens to them.</div>
+  <div class="table-wrap" style="border:1px solid var(--s200);border-radius:8px"><table class="data">
+    <thead><tr><th>Item</th><th class="num">Damaged</th><th class="num">Missing</th></tr></thead>
+    <tbody>{% for l in lines %}{% if l.quantity_damaged or l.quantity_short %}
+      <tr><td><b>{{ l.item.name }}</b></td><td class="num">{{ l.quantity_damaged }}</td><td class="num">{{ l.quantity_short }}</td></tr>{% endif %}{% endfor %}</tbody>
+  </table></div>
+  {% field form.resolution %}
+  {% field form.note %}
+  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'branchops:dispatch_detail' d.pk %}">Back</a><button class="btn" type="submit">Close dispatch</button></div>
+</form>
+{% endblock %}

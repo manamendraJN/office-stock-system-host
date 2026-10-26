@@ -1,0 +1,9 @@
+{% extends "base_auth.html" %}
+{% block title %}Not allowed{% endblock %}
+{% block content %}
+<div class="card"><div class="card-body" style="text-align:center">
+  <h1 style="font-size:1.25rem">You can't do that</h1>
+  <p class="muted">{{ message|default:"You do not have permission to open this page." }}</p>
+  <a class="btn" href="/">Back to the dashboard</a>
+</div></div>
+{% endblock %}

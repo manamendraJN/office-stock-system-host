@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Dispatches{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Dispatches</h1><p>{% if show_branch %}Items sent from the main office to the branches{% else %}Items on their way to your branch. Confirm what arrives{% endif %}</p></div>
+  {% if can_send %}<a class="btn" href="{% url 'branchops:dispatch_create' %}">{% icon 'plus' 'icon icon-sm' %} New dispatch</a>{% endif %}
+</div>
+<form method="get" class="card" style="margin-bottom:1rem"><div class="filters">
+  <div class="field grow"><input type="search" name="q" value="{{ f.q }}" placeholder="Search dispatch number" aria-label="Search dispatches"></div>
+  <div class="field"><select name="status" aria-label="Status" onchange="this.form.submit()"><option value="">All statuses</option>
+    <option value="open" {% if f.status == 'open' %}selected{% endif %}>Needs attention (on the way or with differences)</option>
+    {% for value, s in statuses.items %}<option value="{{ value }}" {% if f.status == value %}selected{% endif %}>{{ s.label }}</option>{% endfor %}</select></div>
+  <button class="btn btn-secondary" type="submit">Search</button>
+</div></form>
+{% if not rows %}
+  <div class="card empty"><h3>{% if filters_on %}No dispatches match your filters{% else %}No dispatches yet{% endif %}</h3>
+  <p>{% if filters_on %}Try clearing the search or filter.{% elif show_branch %}Send approved requests to the branches here.{% else %}Nothing has been sent to your branch yet.{% endif %}</p>
+  {% if not filters_on and can_send %}<p><a class="btn" href="{% url 'branchops:dispatch_create' %}">Send the first items</a></p>{% endif %}</div>
+{% else %}
+<div class="card table-wrap"><table class="data">
+  <thead><tr><th>Number</th><th>Date</th>{% if show_branch %}<th>Sent to</th>{% endif %}<th>Request</th><th class="num">Received / sent</th><th>Status</th></tr></thead>
+  <tbody>{% for x in rows %}
+    <tr><td class="nowrap mono small"><a href="{% url 'branchops:dispatch_detail' x.d.pk %}"><b>{{ x.d.reference }}</b></a></td>
+    <td class="nowrap muted">{{ x.d.dispatch_date|fdate }}</td>
+    {% if show_branch %}<td><b>{{ x.d.destination.name }}</b></td>{% endif %}
+    <td class="nowrap mono small muted">{{ x.d.request.number|default:"–" }}</td>
+    <td class="num nowrap muted">{% if x.d.status == 'in_transit' %}– / {{ x.total_sent }}{% else %}{{ x.total_received }} / {{ x.total_sent }}{% endif %}</td>
+    <td>{% status_badge 'dispatch' x.d.status %}</td></tr>
+  {% endfor %}</tbody>
+</table></div>
+{% endif %}
+{% endblock %}

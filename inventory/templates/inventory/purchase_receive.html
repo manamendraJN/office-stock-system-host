@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Receive {{ p.number }}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Receive items: {{ p.number }}</h1><p>{{ p.supplier.name }}</p></div></div>
+<form method="post" class="card card-body stack medium" data-confirm="Add these quantities to stock? This cannot be undone here." novalidate>
+  {% csrf_token %}
+  <div class="alert alert-info" style="margin:0">Enter what actually arrived. You can receive part now and the rest later.</div>
+  <div class="table-wrap" style="border:1px solid var(--s200);border-radius:8px"><table class="data">
+    <thead><tr><th>Item</th><th class="num">Ordered</th><th class="num">Received</th><th class="num">Receive now</th></tr></thead>
+    <tbody>{% for r in rows %}
+      <tr><td><b>{{ r.l.item.name }}</b><div class="mono small muted">{{ r.l.item.code }}</div></td>
+      <td class="num nowrap">{{ r.l.quantity_ordered }} <span class="muted">{{ r.l.item.unit }}</span></td>
+      <td class="num">{{ r.l.quantity_received }}</td>
+      <td class="num">{% if r.outstanding > 0 %}
+        <input type="number" name="receive_{{ r.l.pk }}" min="0" max="{{ r.outstanding }}" step="1" inputmode="numeric" value="{{ r.value }}" style="width:6rem;text-align:right" aria-label="Receive {{ r.l.item.name }}" class="{% if r.error %}invalid{% endif %}">
+        {% if r.error %}<div class="err small" style="color:var(--red-600)">{{ r.error }}</div>{% endif %}
+        {% else %}<span class="muted">Done</span>{% endif %}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'inventory:purchase_detail' p.pk %}">Back</a><button class="btn" type="submit">Add to stock</button></div>
+</form>
+{% endblock %}

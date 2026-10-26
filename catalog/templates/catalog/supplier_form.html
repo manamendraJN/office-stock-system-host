@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{% if supplier %}Edit supplier{% else %}Add supplier{% endif %}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>{% if supplier %}Edit supplier{% else %}Add supplier{% endif %}</h1></div></div>
+<form method="post" class="card card-body stack narrow" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  {% field form.name %}
+  <div class="form-grid"><div>{% field form.contact %}</div><div>{% field form.phone %}</div></div>
+  {% if supplier %}{% field form.active %}{% endif %}
+  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'catalog:supplier_list' %}">Cancel</a><button class="btn" type="submit">{% if supplier %}Save changes{% else %}Add supplier{% endif %}</button></div>
+</form>
+{% endblock %}

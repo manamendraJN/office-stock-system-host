@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Users</h1><p>Who can sign in, and what they can do</p></div>
+  <a class="btn" href="{% url 'accounts:user_create' %}">{% icon 'plus' 'icon icon-sm' %} Add user</a>
+</div>
+{% if not rows %}
+  <div class="card empty"><h3>No users yet</h3></div>
+{% else %}
+<div class="card table-wrap">
+  <table class="data">
+    <thead><tr><th>Name</th><th>Role</th><th>Access</th><th>Branch</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><b>{{ r.u.name }}</b>{% if r.u.pk == request.user.pk %} <span class="small muted">(you)</span>{% endif %}<div class="small muted">{{ r.u.email }}</div></td>
+        <td>{{ r.role_name }}</td>
+        <td class="nowrap muted">{% if r.full %}Full access{% else %}{{ r.perm_count|plural:"feature" }}{% endif %}</td>
+        <td class="muted">{{ r.u.branch.name }}</td>
+        <td>{% if r.u.active %}{% badge "Active" "green" %}{% else %}{% badge "Disabled" "gray" %}{% endif %}{% if r.u.is_locked %} {% badge "Locked" "amber" %}{% endif %}</td>
+        <td class="right nowrap">
+          <a class="btn btn-ghost btn-sm" href="{% url 'accounts:user_edit' r.u.pk %}">Edit</a>
+          <a class="btn btn-ghost btn-sm" href="{% url 'accounts:user_reset_password' r.u.pk %}">Reset password</a>
+          {% if r.u.pk != request.user.pk %}
+          <form method="post" action="{% url 'accounts:user_toggle' r.u.pk %}" class="inline" data-confirm="{% if r.u.active %}Disable {{ r.u.name }}? They will not be able to sign in.{% else %}Enable {{ r.u.name }}?{% endif %}">
+            {% csrf_token %}<button class="btn btn-ghost btn-sm" type="submit" {% if r.u.active %}style="color:var(--red-600)"{% endif %}>{% if r.u.active %}Disable{% else %}Enable{% endif %}</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

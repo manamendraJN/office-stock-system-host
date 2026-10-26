@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Petty cash book{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Petty cash book</h1><p>Every rupee received and spent</p></div>
+  {% if can_spend %}<a class="btn" href="{% url 'pettycash:expense_create' %}">{% icon 'plus' 'icon icon-sm' %} Record spending</a>{% endif %}
+</div>
+{% include "pettycash/_tabs.html" with active="cash_book" %}
+{% if balance is not None %}
+<div class="notice {% if low %}alert-warning{% endif %}" style="margin-bottom:1rem">Balance{% if show_branch %} for the chosen branch{% endif %}: <b>{{ balance|money }}</b>{% if low %} — low{% endif %}</div>
+{% endif %}
+<form method="get" class="card" style="margin-bottom:1rem"><div class="filters">
+  {% if show_branch %}<div class="field"><select name="branch" aria-label="Branch" onchange="this.form.submit()"><option value="">All branches</option>
+    {% for b in branches %}<option value="{{ b.pk }}" {% if f.branch == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>{% endfor %}</select></div>{% endif %}
+  <div class="field"><select name="type" aria-label="Type" onchange="this.form.submit()"><option value="">All types</option>
+    {% for value, t in types.items %}<option value="{{ value }}" {% if f.type == value %}selected{% endif %}>{{ t.label }}</option>{% endfor %}</select></div>
+  <button class="btn btn-secondary" type="submit">Filter</button>
+</div></form>
+{% if not rows %}
+  <div class="card empty"><h3>{% if filters_on %}Nothing matches your filters{% else %}No petty cash movements yet{% endif %}</h3>
+  <p>{% if filters_on %}Try clearing the filters.{% else %}Cash received and spent is listed here.{% endif %}</p></div>
+{% else %}
+<div class="card table-wrap"><table class="data">
+  <thead><tr><th>Date</th>{% if show_branch %}<th>Branch</th>{% endif %}<th>What</th><th>Type</th><th>By</th><th class="num">Amount</th><th></th></tr></thead>
+  <tbody>{% for x in rows %}
+    <tr><td class="nowrap muted">{{ x.e.entry_date|fdate }}</td>
+    {% if show_branch %}<td>{{ x.e.branch.name }}</td>{% endif %}
+    <td>{% if x.e.request %}<a href="{% url 'pettycash:request_detail' x.e.request.pk %}">{{ x.e.description }}</a>{% else %}{{ x.e.description|default:"–" }}{% endif %}{% if x.cancelled %} <span class="muted small">(cancelled)</span>{% endif %}</td>
+    <td>{% status_badge 'petty_entry' x.e.type %}</td>
+    <td class="muted">{{ x.e.created_by.name }}</td>
+    <td class="num nowrap" style="color:{% if x.e.amount < 0 %}var(--red-600){% else %}var(--green-700,#15803d){% endif %}">{% if x.e.amount > 0 %}+{% endif %}{{ x.e.amount|money }}</td>
+    <td class="nowrap">{% if x.can_cancel %}
+      <form method="post" action="{% url 'pettycash:expense_cancel' x.e.pk %}" class="inline" data-confirm="Cancel this expense? The money goes back into petty cash.">{% csrf_token %}
+        <button class="linkbtn" type="submit" style="color:var(--red-600)">Cancel</button></form>{% endif %}</td></tr>
+  {% endfor %}</tbody>
+</table></div>
+{% pagination page pages total "entries" %}
+{% endif %}
+{% endblock %}

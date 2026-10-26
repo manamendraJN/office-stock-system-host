@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Petty Cash{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Petty Cash</h1><p>{% if all_branches %}Cash held by the main office and each branch for buying inventory items{% else %}The cash your branch holds for buying inventory items{% endif %}</p></div>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+    {% if can_request %}<a class="btn btn-secondary" href="{% url 'pettycash:expense_create' %}">Record spending</a>
+    <a class="btn" href="{% url 'pettycash:request_create' %}">{% icon 'plus' 'icon icon-sm' %} Request petty cash</a>{% endif %}
+  </div>
+</div>
+{% include "pettycash/_tabs.html" with active="overview" %}
+
+{% if all_branches and low_count %}
+<div class="alert alert-warning" role="alert"><b>{{ low_count }} {% if low_count == 1 %}place is{% else %}places are{% endif %} low on petty cash</b> (at or below {{ low_level|money }}).</div>
+{% elif own and own.low %}
+<div class="alert alert-warning" role="alert"><b>Your petty cash is low</b> ({{ own.balance|money }}, the low level is {{ low_level|money }}). Please request more.</div>
+{% endif %}
+
+{% if not all_branches and own %}
+<div class="grid grid-4" style="margin-bottom:1rem">
+  <div class="tile"><div class="label">Petty cash balance</div><div class="value {% if own.low %}bad{% endif %}">{{ own.balance|money }}</div>
+    <div class="note">{% if own.low %}Low (at or below {{ low_level|money }}){% else %}Low level is {{ low_level|money }}{% endif %}</div></div>
+  <div class="tile"><div class="label">Waiting for approval</div><div class="value">{{ own.pending|money }}</div></div>
+</div>
+{% elif all_branches %}
+<div class="card table-wrap" style="margin-bottom:1rem"><table class="data">
+  <thead><tr><th>Branch</th><th class="num">Balance</th><th>Level</th><th class="num">Waiting for approval</th><th></th></tr></thead>
+  <tbody>{% for s in summaries %}
+    <tr><td><b>{{ s.branch.name }}</b>{% if s.branch.is_main %} <span class="muted small">main office</span>{% endif %}{% if not s.branch.active %} <span class="muted small">inactive</span>{% endif %}</td>
+    <td class="num nowrap"><b>{{ s.balance|money }}</b></td>
+    <td>{% if s.low %}{% badge "Low" "red" %}{% else %}{% badge "OK" "green" %}{% endif %}</td>
+    <td class="num muted">{% if s.pending %}{{ s.pending|money }}{% else %}–{% endif %}</td>
+    <td class="nowrap"><a class="small" href="{% url 'pettycash:ledger' %}?branch={{ s.branch.pk }}">Cash book</a></td></tr>
+  {% empty %}<tr><td colspan="5" class="muted">No branches yet</td></tr>{% endfor %}</tbody>
+</table></div>
+<p class="small muted" style="margin:-.5rem 0 1rem">Low means at or below {{ low_level|money }}.{% if can_configure %} <a href="{% url 'pettycash:settings' %}">Change the low level</a>{% endif %}</p>
+{% endif %}
+
+{% if pending %}
+<div class="card" style="margin-bottom:1rem"><div class="card-head"><h2>{% if can_approve %}Waiting for your approval{% else %}Waiting for approval{% endif %}</h2><a class="small" href="{% url 'pettycash:request_list' %}?status=submitted">See all</a></div>
+<div class="table-wrap"><table class="data">
+  <thead><tr><th>Number</th><th>Date</th>{% if all_branches %}<th>Branch</th>{% endif %}<th>Requested by</th><th class="num">Amount</th><th></th></tr></thead>
+  <tbody>{% for r in pending %}
+    <tr><td class="nowrap mono small"><a href="{% url 'pettycash:request_detail' r.pk %}"><b>{{ r.number }}</b></a></td>
+    <td class="nowrap muted">{{ r.created_at|fdate }}</td>
+    {% if all_branches %}<td><b>{{ r.branch.name }}</b></td>{% endif %}
+    <td class="muted">{{ r.requested_by.name }}</td><td class="num nowrap">{{ r.amount_requested|money }}</td>
+    <td class="nowrap">{% if can_approve %}<a class="btn btn-sm" href="{% url 'pettycash:request_review' r.pk %}">Review</a>{% endif %}</td></tr>
+  {% endfor %}</tbody>
+</table></div></div>
+{% endif %}
+
+<div class="card"><div class="card-head"><h2>Latest cash movements</h2><a class="small" href="{% url 'pettycash:ledger' %}">Cash book</a></div>
+{% if not recent %}<div class="card-body muted">Nothing yet. Cash appears here once a petty cash request is approved.</div>{% else %}
+<div class="table-wrap"><table class="data">
+  <thead><tr><th>Date</th>{% if all_branches %}<th>Branch</th>{% endif %}<th>What</th><th>Type</th><th class="num">Amount</th></tr></thead>
+  <tbody>{% for x in recent %}
+    <tr><td class="nowrap muted">{{ x.e.entry_date|fdate }}</td>
+    {% if all_branches %}<td>{{ x.e.branch.name }}</td>{% endif %}
+    <td>{{ x.e.description|default:"–" }}{% if x.cancelled %} <span class="muted small">(cancelled)</span>{% endif %}</td>
+    <td>{% status_badge 'petty_entry' x.e.type %}</td>
+    <td class="num nowrap" style="color:{% if x.e.amount < 0 %}var(--red-600){% else %}var(--green-700,#15803d){% endif %}">{% if x.e.amount > 0 %}+{% endif %}{{ x.e.amount|money }}</td></tr>
+  {% endfor %}</tbody>
+</table></div>{% endif %}</div>
+{% endblock %}

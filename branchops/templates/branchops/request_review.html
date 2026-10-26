@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Review {{ r.number }}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Review {{ r.number }}</h1><p>{{ r.branch.name }}</p></div></div>
+<form method="post" class="card card-body stack medium" novalidate data-review>
+  {% csrf_token %}
+  <div class="alert alert-info" style="margin:0">Set how many of each item to approve. Give a reason for anything you reduce or reject.</div>
+  <div class="table-wrap" style="border:1px solid var(--s200);border-radius:8px"><table class="data">
+    <thead><tr><th>Item</th><th class="num">Requested</th><th class="num">Approve</th></tr></thead>
+    <tbody>{% for x in rows %}
+      <tr data-review-row data-requested="{{ x.l.quantity_requested }}"><td><b>{{ x.l.item.name }}</b><div class="mono small muted">{{ x.l.item.code }}</div>
+        <div class="small muted">{{ x.stock }} in main office stock</div></td>
+      <td class="num nowrap">{{ x.l.quantity_requested }} <span class="muted">{{ x.l.item.unit }}</span></td>
+      <td class="num"><div style="margin-left:auto;width:11rem">
+        <input type="number" name="approve_{{ x.l.pk }}" min="0" max="{{ x.l.quantity_requested }}" step="1" inputmode="numeric" value="{{ x.value.quantity }}" style="text-align:right" aria-label="Approve {{ x.l.item.name }}" data-approve class="{% if x.error %}invalid{% endif %}">
+        <input type="text" name="reason_{{ x.l.pk }}" maxlength="200" placeholder="Reason" value="{{ x.value.reason }}" aria-label="Reason for {{ x.l.item.name }}" data-reason style="margin-top:.5rem">
+        {% if x.error %}<div class="err small" role="alert" style="color:var(--red-600)">{{ x.error }}</div>{% endif %}</div></td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'branchops:request_detail' r.pk %}">Back</a><button class="btn" type="submit" data-review-submit>Approve request</button></div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var form = document.querySelector('[data-review]'), btn = form.querySelector('[data-review-submit]');
+  function refresh() {
+    var total = 0, full = true;
+    form.querySelectorAll('[data-review-row]').forEach(function (row) {
+      var want = parseInt(row.getAttribute('data-requested'), 10), n = parseInt(row.querySelector('[data-approve]').value, 10) || 0;
+      total += n; if (n !== want) full = false;
+      row.querySelector('[data-reason]').style.display = n < want ? '' : 'none';
+    });
+    btn.textContent = total === 0 ? 'Reject request' : full ? 'Approve request' : 'Approve with changes';
+    btn.className = total === 0 ? 'btn btn-danger' : 'btn';
+  }
+  form.addEventListener('input', refresh); refresh();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}New request{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>New request</h1></div></div>
+<form method="post" class="card card-body stack medium" novalidate>
+  {% csrf_token %}
+  <div style="font-size:.875rem;font-weight:500;color:var(--s700)">What does your branch need?</div>
+  {% include "inventory/_lines.html" with mode="simple" %}
+  {% field form.notes %}
+  <p class="small muted" style="margin:0">The main office reviews your request and may approve less than you ask for. You can cancel it until it has been reviewed.</p>
+  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'branchops:request_list' %}">Cancel</a><button class="btn" type="submit">Send request</button></div>
+</form>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Reports</h1><p>Purchases, usage, dispatches and stock balances</p></div>
+  {% if result and result.rows %}
+  <div class="no-print" style="display:flex;gap:.5rem">
+    <a class="btn btn-secondary" href="{% qs format='csv' %}">Download CSV</a>
+    <button class="btn btn-secondary" type="button" onclick="window.print()">Print</button>
+  </div>{% endif %}
+</div>
+
+<div class="no-print" style="display:flex;overflow-x:auto;border-bottom:1px solid var(--s200);margin-bottom:1.25rem">
+  {% for key, t in tabs.items %}
+    <a href="?type={{ key }}" class="{% if key == rtype %}on{% endif %}" style="white-space:nowrap;padding:.625rem 1rem;font-size:.875rem;font-weight:500;margin-bottom:-1px;border-bottom:2px solid {% if key == rtype %}var(--brand-600,#4f46e5){% else %}transparent{% endif %};color:{% if key == rtype %}var(--brand-700,#4338ca){% else %}var(--s500){% endif %}">{{ t.label }}</a>
+  {% endfor %}
+</div>
+
+<form method="get" class="no-print stack" style="margin-bottom:1rem">
+  <input type="hidden" name="type" value="{{ rtype }}">
+  {% if meta.dated %}
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.5rem">
+    <input type="date" name="from" value="{{ f.from }}" aria-label="From date" style="width:auto">
+    <span class="muted small">to</span>
+    <input type="date" name="to" value="{{ f.to }}" aria-label="To date" style="width:auto">
+    <button class="btn btn-secondary" type="submit">Show</button>
+    <span style="display:flex;flex-wrap:wrap;gap:.25rem;margin-left:.5rem">
+      {% for label, qf, qt in quick %}<a class="btn btn-ghost btn-sm" href="?type={{ rtype }}&from={{ qf }}&to={{ qt }}">{{ label }}</a>{% endfor %}
+    </span>
+  </div>
+  {% endif %}
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.75rem">
+    {% if rtype == 'balances' %}
+      {% if other_branches %}<select name="branch" aria-label="Branch" style="width:auto" onchange="this.form.submit()"><option value="">Main office</option>
+        {% for b in other_branches %}<option value="{{ b.pk }}" {% if f.branch == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>{% endfor %}</select>{% endif %}
+      <label class="check"><input type="checkbox" name="low" value="1" {% if f.low %}checked{% endif %} onchange="this.form.submit()"> Low stock only</label>
+    {% elif rtype == 'purchases' %}
+      <select name="by" aria-label="Group by" style="width:auto" onchange="this.form.submit()"><option value="supplier" {% if f.by != 'item' %}selected{% endif %}>By supplier</option><option value="item" {% if f.by == 'item' %}selected{% endif %}>By item</option></select>
+      {% if opts.suppliers %}<select name="supplier" aria-label="Supplier" style="width:auto" onchange="this.form.submit()"><option value="">All suppliers</option>
+        {% for s in opts.suppliers %}<option value="{{ s.pk }}" {% if f.supplier == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select>{% endif %}
+    {% elif rtype == 'usage' %}
+      <select name="by" aria-label="Group by" style="width:auto" onchange="this.form.submit()"><option value="item" {% if f.by != 'department' %}selected{% endif %}>By item</option><option value="department" {% if f.by == 'department' %}selected{% endif %}>By department</option></select>
+      {% if opts.departments %}<select name="department" aria-label="Department" style="width:auto" onchange="this.form.submit()"><option value="">All departments</option>
+        {% for d in opts.departments %}<option value="{{ d }}" {% if f.department == d %}selected{% endif %}>{{ d }}</option>{% endfor %}</select>{% endif %}
+    {% elif rtype == 'dispatches' and other_branches %}
+      <select name="destination" aria-label="Branch" style="width:auto" onchange="this.form.submit()"><option value="">All branches</option>
+        {% for b in other_branches %}<option value="{{ b.pk }}" {% if f.destination == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>{% endfor %}</select>
+    {% endif %}
+  </div>
+</form>
+
+{% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
+
+<div class="print-only" style="margin-bottom:1rem">
+  <h2 style="margin:0">{{ meta.label }} report</h2>
+  <p class="small muted">{{ scope }} · {{ period }} · Printed {{ printed }}</p>
+</div>
+
+{% if result %}
+  {% if not rows %}
+    <div class="card empty"><h3>Nothing to report</h3><p>{% if meta.dated %}No records in this period. Try a wider date range.{% else %}There are no items to show.{% endif %}</p></div>
+  {% else %}
+    <p class="no-print small muted">{{ scope }} · {{ period }} · {{ rows|length|plural:"row" }}</p>
+    <div class="card table-wrap"><table class="data">
+      <thead><tr>{% for c in columns %}<th class="{% if c.type == 'number' or c.type == 'money' %}num{% endif %}">{{ c.label }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for r in rows %}<tr>{% for cell in r.cells %}
+        <td class="{% if cell.col.type == 'number' or cell.col.type == 'money' %}num nowrap{% endif %}{% if cell.col.key == 'name' or cell.col.key == 'supplier' or cell.col.key == 'department' %} strong{% endif %}">{% report_cell cell.col cell.value %}</td>{% endfor %}</tr>{% endfor %}</tbody>
+      {% if totals %}<tfoot><tr style="font-weight:600">{% for t in total_cells %}
+        <td class="{% if t.col.type == 'number' or t.col.type == 'money' %}num{% endif %}">{% if t.first %}Total{% elif t.has %}{% report_cell t.col t.value %}{% endif %}</td>{% endfor %}</tr></tfoot>{% endif %}
+    </table></div>
+    {% if rtype == 'balances' %}<p class="small muted">Stock value is the quantity multiplied by each item's last purchase cost. Items with no recorded cost show a dash.</p>
+    {% elif rtype == 'purchases' %}<p class="small muted">Cancelled purchases are left out. "Received value" counts only what has actually arrived.</p>
+    {% elif rtype == 'usage' %}<p class="small muted">Cancelled issues are left out. Quantities are not added together because the units differ.</p>{% endif %}
+  {% endif %}
+{% endif %}
+{% endblock %}

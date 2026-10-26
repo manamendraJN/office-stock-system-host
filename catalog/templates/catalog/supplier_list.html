@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Suppliers{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Suppliers</h1><p>Who you buy office supplies from</p></div>
+  {% if can_edit %}<a class="btn" href="{% url 'catalog:supplier_create' %}">{% icon 'plus' 'icon icon-sm' %} Add supplier</a>{% endif %}
+</div>
+{% if not suppliers %}
+  <div class="card empty"><h3>No suppliers yet</h3><p>Add the shops and companies you buy from, then record purchases against them.</p>
+  {% if can_edit %}<p><a class="btn" href="{% url 'catalog:supplier_create' %}">Add the first supplier</a></p>{% endif %}</div>
+{% else %}
+<div class="card table-wrap">
+  <table class="data">
+    <thead><tr><th>Name</th><th>Contact</th><th>Phone</th><th class="num">Purchases</th><th>Status</th>{% if can_edit %}<th><span class="sr-only">Actions</span></th>{% endif %}</tr></thead>
+    <tbody>
+    {% for s in suppliers %}
+      <tr>
+        <td><b>{{ s.name }}</b></td><td class="muted">{{ s.contact }}</td><td class="nowrap muted">{{ s.phone }}</td>
+        <td class="num muted">{{ s.purchase_count }}</td>
+        <td>{% if s.active %}{% badge "Active" "green" %}{% else %}{% badge "Inactive" "gray" %}{% endif %}</td>
+        {% if can_edit %}<td class="right nowrap">
+          <a class="btn btn-ghost btn-sm" href="{% url 'catalog:supplier_edit' s.pk %}">Edit</a>
+          <form method="post" action="{% url 'catalog:supplier_delete' s.pk %}" class="inline" data-confirm="Delete &quot;{{ s.name }}&quot;? A supplier with purchases is deactivated instead.">
+            {% csrf_token %}<button class="btn btn-ghost btn-sm" style="color:var(--red-600)" type="submit">Delete</button></form>
+        </td>{% endif %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

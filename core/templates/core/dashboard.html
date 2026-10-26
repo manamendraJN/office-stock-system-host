@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-header hero">
+  <span class="ring r1" data-parallax="-0.12" aria-hidden="true"></span><span class="ring r2" data-parallax="0.09" aria-hidden="true"></span><span class="ring r3" data-parallax="-0.2" aria-hidden="true"></span>
+  <div><h1>Hello, {{ first_name }}</h1>
+  <p>{% if data.scope.branch_side %}Here is what needs attention today · {{ data.scope.branch_name }}{% else %}Here is what needs attention today.{% endif %}</p></div>
+</div>
+
+{% if not has_content %}
+  <div class="card empty"><h3>Nothing to show yet</h3><p>Your account has no features ticked that show numbers here. Ask the Super Admin if you need access.</p></div>
+{% else %}
+  {% if tiles %}
+  <div class="grid grid-4">
+    {% for t in tiles %}
+    <a class="tile" href="{% url t.url %}">
+      <div class="label">{{ t.label }}</div>
+      <div class="value {{ t.tone }}">{% if t.money %}{{ t.value|money }}{% else %}{{ t.value }}{% endif %}</div>
+      {% if t.note %}<div class="note">{{ t.note }}</div>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="grid grid-2 mt">
+    {% if data.low_stock %}
+    <div class="card">
+      <div class="card-head"><h2>Running low</h2><a class="small" href="{% url stock_link %}">{% if perm.stock_view %}All stock{% else %}All items{% endif %}</a></div>
+      <div class="card-body">
+        {% if not data.low_stock.items %}
+          <p class="muted small" style="margin:0">Every active item is above its minimum.</p>
+        {% else %}
+        <ul class="rows">
+          {% for i in data.low_stock.items %}
+          <li>
+            <div><b>{{ i.name }}</b><div class="mono small muted">{{ i.code }}</div></div>
+            <div style="display:flex;align-items:center;gap:.75rem">
+              <span class="muted">{% if i.quantity > 0 %}{{ i.quantity }}{% else %}0{% endif %} of {{ i.min_stock }} {{ i.unit }}</span>
+              {% if i.quantity <= 0 %}{% badge "Out of stock" "red" %}{% else %}{% badge "Low stock" "amber" %}{% endif %}
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        {% if data.low_stock.count > data.low_stock.items|length %}
+          <p class="small muted" style="margin:.75rem 0 0">Showing the {{ data.low_stock.items|length }} most urgent of {{ data.low_stock.count }}.</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if 'recent_movements' in data %}
+    <div class="card">
+      <div class="card-head"><h2>Latest stock movements</h2><a class="small" href="{% url 'inventory:stock' %}">All movements</a></div>
+      <div class="card-body">
+        {% if not recent %}
+          <p class="muted small" style="margin:0">No stock has moved yet. Receive a purchase to get started.</p>
+        {% else %}
+        <ul class="rows">
+          {% for m in recent %}
+          <li>
+            <div><b>{{ m.item.name }}</b><div class="small muted">{{ m.created_at|ftime }}{% if m.created_by %} · {{ m.created_by.name }}{% endif %}</div></div>
+            <div style="display:flex;align-items:center;gap:.75rem">
+              {% movement_badge m.type %}
+              <span class="{% if m.quantity_change < 0 %}neg{% else %}pos{% endif %}" style="min-width:3.5rem;text-align:right">{{ m.quantity_change|signed }}</span>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+{% endif %}
+{% endblock %}

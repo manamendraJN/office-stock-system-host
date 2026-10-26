@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Stock & Movements{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Stock &amp; Movements</h1><p>Current balances and the last 30 days of movements{% if branch %} · {{ branch.name }}{% endif %}</p></div>
+  {% if can_adjust and branch %}<a class="btn" href="{% url 'inventory:stock_correct' %}{% if branch %}?branch={{ branch.pk }}{% endif %}">{% icon 'plus' 'icon icon-sm' %} Correct stock</a>{% endif %}
+</div>
+
+<div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:.75rem;border-bottom:1px solid var(--s200);margin-bottom:1.25rem">
+  <div class="seg" style="border:0;background:none">
+    <a href="{% url 'inventory:stock' %}{% if branch and can_pick_branch %}?branch={{ branch.pk }}{% endif %}" class="{% if tab == 'stock' %}on{% endif %}" style="border-radius:8px 8px 0 0">Current stock</a>
+    <a href="{% url 'inventory:stock' %}?tab=movements" class="{% if tab == 'movements' %}on{% endif %}" style="border-radius:8px 8px 0 0">Movements</a>
+  </div>
+  {% if can_pick_branch and tab == 'stock' %}
+  <form method="get" style="margin-bottom:.5rem"><select name="branch" aria-label="Branch" onchange="this.form.submit()" style="width:13rem">
+    {% for b in branches %}<option value="{{ b.pk }}" {% if branch.pk == b.pk %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+  </select></form>
+  {% endif %}
+</div>
+
+{% if tab == 'stock' %}
+  <form method="get" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;margin-bottom:1rem">
+    {% if branch and can_pick_branch %}<input type="hidden" name="branch" value="{{ branch.pk }}">{% endif %}
+    <div style="flex:1;min-width:12rem"><input type="search" name="q" value="{{ f.q }}" placeholder="Search name or code" aria-label="Search items"></div>
+    <label class="check"><input type="checkbox" name="low" value="1" {% if f.low %}checked{% endif %} onchange="this.form.submit()"> Low stock only</label>
+    <button class="btn btn-secondary" type="submit">Search</button>
+  </form>
+  {% if not rows %}
+    <div class="card empty"><h3>{% if filters_on %}No items match your filters{% else %}No items yet{% endif %}</h3><p>{% if filters_on %}Try clearing the search or filter.{% else %}Add items on the Items page first.{% endif %}</p></div>
+  {% else %}
+  <div class="card table-wrap"><table class="data">
+    <thead><tr><th>Code</th><th>Item</th><th>Category</th><th class="num">In stock</th><th class="num">Minimum</th><th>Status</th>{% if can_adjust %}<th><span class="sr-only">Actions</span></th>{% endif %}</tr></thead>
+    <tbody>{% for r in rows %}
+      <tr><td class="nowrap mono small muted">{{ r.item.code }}</td><td><b>{{ r.item.name }}</b></td><td class="muted">{{ r.item.category.name }}</td>
+      <td class="num nowrap"><b>{{ r.quantity }}</b> <span class="muted">{{ r.item.unit }}</span></td><td class="num muted">{{ r.item.min_stock }}</td>
+      <td>{% if not r.item.active %}{% badge "Inactive" "gray" %}{% elif r.quantity <= 0 %}{% badge "Out of stock" "red" %}{% elif r.low %}{% badge "Low stock" "amber" %}{% else %}{% badge "In stock" "green" %}{% endif %}</td>
+      {% if can_adjust %}<td class="right"><a class="btn btn-ghost btn-sm" href="{% url 'inventory:stock_correct' %}?item={{ r.item.pk }}&branch={{ branch.pk }}">Correct</a></td>{% endif %}</tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% endif %}
+{% else %}
+  <form method="get" class="grid grid-4" style="margin-bottom:.75rem">
+    <input type="hidden" name="tab" value="movements">
+    {% if can_pick_branch %}<select name="branch" aria-label="Branch" onchange="this.form.submit()"><option value="">All branches</option>
+      {% for b in branches %}<option value="{{ b.pk }}" {% if f.branch == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+      <option value="in_transit" {% if f.branch == 'in_transit' %}selected{% endif %}>In transit</option></select>{% endif %}
+    <select name="item" aria-label="Item" onchange="this.form.submit()"><option value="">All items</option>
+      {% for it in items %}<option value="{{ it.pk }}" {% if f.item == it.pk|stringformat:"s" %}selected{% endif %}>{{ it.name }}</option>{% endfor %}</select>
+    <select name="type" aria-label="Movement type" onchange="this.form.submit()"><option value="">All movements</option>
+      {% for value, t in types.items %}<option value="{{ value }}" {% if f.type == value %}selected{% endif %}>{{ t.label }}</option>{% endfor %}</select>
+    <input type="date" name="from" value="{{ f.from }}" aria-label="From date" onchange="this.form.submit()">
+    <input type="date" name="to" value="{{ f.to }}" aria-label="To date" onchange="this.form.submit()">
+  </form>
+  <p class="small muted">Detailed movements are permanently removed after 30 days. Their net quantities are retained so current stock stays the same.</p>
+  {% if problem %}<div class="alert alert-error" role="alert">{{ problem }}</div>{% endif %}
+  {% if not movements %}
+    <div class="card empty"><h3>{% if filters_on %}No movements match your filters{% else %}No movements yet{% endif %}</h3><p>{% if filters_on %}Try clearing the filters.{% else %}Every purchase received, item issued and correction appears here.{% endif %}</p></div>
+  {% else %}
+  <div class="card table-wrap"><table class="data">
+    <thead><tr><th>When</th>{% if can_pick_branch %}<th>Branch</th>{% endif %}<th>Item</th><th>Movement</th><th class="num">Change</th><th>Details</th><th>By</th></tr></thead>
+    <tbody>{% for r in movements %}
+      <tr><td class="nowrap muted">{{ r.m.created_at|fdatetime }}</td>
+      {% if can_pick_branch %}<td class="muted">{% if r.m.in_transit %}In transit{% else %}{{ r.m.branch.name }}{% endif %}</td>{% endif %}
+      <td><b>{{ r.m.item.name }}</b><div class="mono small muted">{{ r.m.item.code }}</div></td>
+      <td>{% movement_badge r.m.type %}</td>
+      <td class="num nowrap {% if r.m.quantity_change < 0 %}neg{% else %}pos{% endif %}">{{ r.m.quantity_change|signed }} <span class="muted" style="font-weight:400">{{ r.m.item.unit }}</span></td>
+      <td class="muted">{% if r.ref %}<span class="mono small">{{ r.ref }}</span>{% if r.text %} · {% endif %}{% endif %}{{ r.text }}</td>
+      <td class="muted">{{ r.m.created_by.name }}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+  {% pagination page pages total "movements" %}</div>
+  {% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Items{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Items</h1><p>{% if branch_side %}Stock at your branch{% else %}Office supplies and current stock at the main office{% endif %}</p></div>
+  {% if can_edit %}<div class="actions">
+    <a class="btn btn-secondary" href="{% url 'catalog:category_list' %}">Categories</a>
+    <a class="btn" href="{% url 'catalog:item_create' %}">{% icon 'plus' 'icon icon-sm' %} Add item</a>
+  </div>{% endif %}
+</div>
+
+<form method="get" class="card" style="margin-bottom:1rem">
+  <div class="filters">
+    <div class="field grow"><input type="search" name="q" value="{{ f.q }}" placeholder="Search by name or code" aria-label="Search items"></div>
+    <div class="field"><select name="category" aria-label="Category" onchange="this.form.submit()">
+      <option value="">All categories</option>
+      {% for c in categories %}<option value="{{ c.pk }}" {% if f.category == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select></div>
+    {% if show_status %}<div class="field"><select name="status" aria-label="Status" onchange="this.form.submit()">
+      <option value="active" {% if f.status == 'active' %}selected{% endif %}>Active</option>
+      <option value="inactive" {% if f.status == 'inactive' %}selected{% endif %}>Inactive</option>
+      <option value="all" {% if f.status == 'all' %}selected{% endif %}>All</option>
+    </select></div>{% endif %}
+    <label class="check" style="padding-bottom:.5rem"><input type="checkbox" name="low" value="1" {% if f.low %}checked{% endif %} onchange="this.form.submit()"> Low stock only</label>
+    <button class="btn btn-secondary" type="submit">Search</button>
+  </div>
+</form>
+
+{% if not rows %}
+  <div class="card empty">
+    <h3>{% if filters_on %}No items match your filters{% else %}No items yet{% endif %}</h3>
+    <p>{% if filters_on %}Try clearing the search or filters.{% else %}Add the supplies you stock, such as paper, pens and ink.{% endif %}</p>
+    {% if not filters_on and can_edit %}<p><a class="btn" href="{% url 'catalog:item_create' %}">Add the first item</a></p>{% endif %}
+  </div>
+{% else %}
+<div class="card table-wrap">
+  <table class="data">
+    <thead><tr><th>Code</th><th>Item</th><th>Category</th><th class="num">In stock</th><th class="num">Minimum</th><th>Status</th>{% if can_edit %}<th><span class="sr-only">Actions</span></th>{% endif %}</tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td class="nowrap mono small muted">{{ r.i.code }}</td>
+        <td><b>{{ r.i.name }}</b></td>
+        <td class="muted">{{ r.i.category.name }}</td>
+        <td class="num nowrap"><b>{{ r.stock }}</b> <span class="muted">{{ r.i.unit }}</span></td>
+        <td class="num muted">{{ r.i.min_stock }}</td>
+        <td>{% if not r.i.active %}{% badge "Inactive" "gray" %}{% elif r.stock <= 0 %}{% badge "Out of stock" "red" %}{% elif r.low %}{% badge "Low stock" "amber" %}{% else %}{% badge "In stock" "green" %}{% endif %}</td>
+        {% if can_edit %}<td class="right nowrap">
+          <a class="btn btn-ghost btn-sm" href="{% url 'catalog:item_edit' r.i.pk %}">Edit</a>
+          <form method="post" action="{% url 'catalog:item_delete' r.i.pk %}" class="inline" data-confirm="Delete &quot;{{ r.i.name }}&quot;? An item with stock history is deactivated instead.">
+            {% csrf_token %}<button class="btn btn-ghost btn-sm" style="color:var(--red-600)" type="submit">Delete</button></form>
+        </td>{% endif %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

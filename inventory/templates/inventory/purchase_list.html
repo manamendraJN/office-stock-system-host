@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Purchases{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Purchases</h1><p>What was bought, and what has arrived at the main office</p></div>
+  {% if can_manage %}<a class="btn" href="{% url 'inventory:purchase_create' %}">{% icon 'plus' 'icon icon-sm' %} New purchase</a>{% endif %}
+</div>
+<form method="get" class="card" style="margin-bottom:1rem"><div class="filters">
+  <div class="field grow"><input type="search" name="q" value="{{ f.q }}" placeholder="Search number, invoice or supplier" aria-label="Search purchases"></div>
+  <div class="field"><select name="status" aria-label="Status" onchange="this.form.submit()"><option value="">All statuses</option>
+    {% for value, s in statuses.items %}<option value="{{ value }}" {% if f.status == value %}selected{% endif %}>{{ s.label }}</option>{% endfor %}</select></div>
+  <div class="field"><select name="supplier" aria-label="Supplier" onchange="this.form.submit()"><option value="">All suppliers</option>
+    {% for s in suppliers %}<option value="{{ s.pk }}" {% if f.supplier == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
+  <div class="field"><input type="date" name="from" value="{{ f.from }}" aria-label="From date" onchange="this.form.submit()"></div>
+  <div class="field"><input type="date" name="to" value="{{ f.to }}" aria-label="To date" onchange="this.form.submit()"></div>
+  <button class="btn btn-secondary" type="submit">Search</button>
+</div></form>
+{% if problem %}<div class="alert alert-error" role="alert">{{ problem }}</div>{% endif %}
+{% if not rows %}
+  <div class="card empty"><h3>{% if filters_on %}No purchases match your filters{% else %}No purchases yet{% endif %}</h3>
+  <p>{% if filters_on %}Try clearing the search or filters.{% else %}Record what you buy here. Stock goes up when the items are received.{% endif %}</p>
+  {% if not filters_on and can_manage %}<p><a class="btn" href="{% url 'inventory:purchase_create' %}">Record the first purchase</a></p>{% endif %}</div>
+{% else %}
+<div class="card table-wrap"><table class="data">
+  <thead><tr><th>Number</th><th>Date</th>{% if show_branch %}<th>Branch</th>{% endif %}<th>Supplier</th><th>Invoice</th><th class="num">Received</th><th class="num">Total</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td class="nowrap mono small"><a href="{% url 'inventory:purchase_detail' r.p.pk %}"><b>{{ r.p.number }}</b></a></td>
+      <td class="nowrap muted">{{ r.p.purchase_date|fdate }}</td>
+      {% if show_branch %}<td class="muted">{{ r.p.branch.name|default:"Main office" }}</td>{% endif %}
+      <td><b>{{ r.p.supplier.name }}</b></td>
+      <td class="muted">{{ r.p.invoice_ref }}</td>
+      <td class="num nowrap muted">{{ r.total_received }} / {{ r.total_ordered }}</td>
+      <td class="num nowrap"><b>{{ r.total|money }}</b></td>
+      <td>{% status_badge 'purchase' r.p.status %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+<p class="small muted right" style="margin-top:.75rem">{{ rows|length|plural:"purchase" }} shown · {{ spent|money }} excluding cancelled</p>
+{% endif %}
+{% endblock %}

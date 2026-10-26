@@ -1,0 +1,8 @@
+{# Sub-menu shared by the petty cash pages. Pass active="overview|requests|cash_book|settings". #}
+{% load ui %}
+<div class="no-print" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem">
+  <a class="btn btn-sm {% if active != 'overview' %}btn-secondary{% endif %}" href="{% url 'pettycash:overview' %}">Overview</a>
+  <a class="btn btn-sm {% if active != 'requests' %}btn-secondary{% endif %}" href="{% url 'pettycash:request_list' %}">Requests</a>
+  <a class="btn btn-sm {% if active != 'cash_book' %}btn-secondary{% endif %}" href="{% url 'pettycash:ledger' %}">Cash book</a>
+  {% if perm.petty_cash_configure and not is_branch_side %}<a class="btn btn-sm {% if active != 'settings' %}btn-secondary{% endif %}" href="{% url 'pettycash:settings' %}">Low level</a>{% endif %}
+</div>

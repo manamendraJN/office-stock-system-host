@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Petty cash requests{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Petty cash requests</h1><p>{% if show_branch %}What the main office and the branches have asked for{% else %}Ask the main office for petty cash{% endif %}</p></div>
+  {% if can_raise %}<a class="btn" href="{% url 'pettycash:request_create' %}">{% icon 'plus' 'icon icon-sm' %} Request petty cash</a>{% endif %}
+</div>
+{% include "pettycash/_tabs.html" with active="requests" %}
+<form method="get" class="card" style="margin-bottom:1rem"><div class="filters">
+  <div class="field grow"><input type="search" name="q" value="{{ f.q }}" placeholder="Search request number" aria-label="Search requests"></div>
+  <div class="field"><select name="status" aria-label="Status" onchange="this.form.submit()"><option value="">All statuses</option>
+    {% for value, s in statuses.items %}<option value="{{ value }}" {% if f.status == value %}selected{% endif %}>{{ s.label }}</option>{% endfor %}</select></div>
+  <button class="btn btn-secondary" type="submit">Search</button>
+</div></form>
+{% if not rows %}
+  <div class="card empty"><h3>{% if filters_on %}No requests match your filters{% else %}No petty cash requests yet{% endif %}</h3>
+  <p>{% if filters_on %}Try clearing the search or filter.{% elif can_raise %}Running low? Ask for more petty cash.{% else %}Requests appear here.{% endif %}</p></div>
+{% else %}
+<div class="card table-wrap"><table class="data">
+  <thead><tr><th>Number</th><th>Date</th>{% if show_branch %}<th>Branch</th>{% endif %}<th>Requested by</th><th class="num">Requested</th><th class="num">Approved</th><th>Status</th></tr></thead>
+  <tbody>{% for r in rows %}
+    <tr><td class="nowrap mono small"><a href="{% url 'pettycash:request_detail' r.pk %}"><b>{{ r.number }}</b></a></td>
+    <td class="nowrap muted">{{ r.created_at|fdate }}</td>
+    {% if show_branch %}<td><b>{{ r.branch.name }}</b></td>{% endif %}
+    <td class="muted">{{ r.requested_by.name }}</td>
+    <td class="num nowrap">{{ r.amount_requested|money }}</td>
+    <td class="num nowrap muted">{% if r.status == 'approved' %}{{ r.amount_approved|money }}{% else %}–{% endif %}</td>
+    <td>{% status_badge 'petty_cash' r.status %}</td></tr>
+  {% endfor %}</tbody>
+</table></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,26 @@
+{# Tick boxes shared by the Roles form and the Users form. JS (app.js) handles dependencies and "Tick all / Clear all". #}
+{% load ui %}
+<fieldset class="perm-picker" data-picker data-implies='{{ implies_json }}'>
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:.75rem;margin-bottom:.5rem">
+    <legend style="font-size:.875rem;font-weight:500;color:var(--s700);padding:0">{{ legend }}</legend>
+    <span class="small" data-picker-tools>
+      <button type="button" class="linkbtn" data-picker-all>Tick all</button> &nbsp;
+      <button type="button" class="linkbtn" style="color:var(--s500)" data-picker-none>Clear all</button>
+    </span>
+  </div>
+  <p class="notice hidden" data-picker-locked>{{ locked }}</p>
+  <p class="notice hidden" data-picker-waiting>{{ waiting }}</p>
+  <div class="perm-list" data-picker-list>
+    {% for f in features %}
+    <div class="perm-row">
+      <div><div class="name">{{ f.label }}</div><div class="hint">{{ f.hint }}</div></div>
+      <div class="perm-checks">
+        {% for key, label in f.perms %}
+        <label class="check"><input type="checkbox" name="permissions" value="{{ key }}" {% if key in selected %}checked{% endif %}> {{ label }}</label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="small hidden" style="color:var(--amber-700);margin-top:.5rem" data-picker-empty>{{ empty_note }}</p>
+</fieldset>
