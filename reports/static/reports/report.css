@@ -1,0 +1,107 @@
+:root {
+  --ink: #17202a;
+  --muted: #697586;
+  --line: #d9e2ec;
+  --line-strong: #1f2933;
+  --header-fill: #eef1f4;
+  --total-fill: #f5f7fa;
+  --green-bg: #d9f2e3;
+  --green-ink: #176b3a;
+  --amber-bg: #fff0c2;
+  --amber-ink: #805b00;
+  --red-bg: #fde0e0;
+  --red-ink: #9b1c1c;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  color: var(--ink);
+  background: #e9edf1;
+  font: 10pt/1.35 Inter, Arial, Helvetica, sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+
+/* A4 document shell and corporate heading. */
+.report-document {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 18mm auto;
+  padding: 16mm 16mm 24mm;
+  background: #fff;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, .14);
+  position: relative;
+}
+.report-header {
+  border-bottom: 2px solid var(--line-strong);
+  padding-bottom: var(--space-5);
+  margin-bottom: var(--space-5);
+}
+.company-name { font-size: 18pt; font-weight: 700; letter-spacing: .01em; }
+h1 { font-size: 15pt; margin: var(--space-2) 0 var(--space-1); }
+.subtitle { color: var(--muted); margin: 0 var(--space-2) var(--space-4) 0; }
+.report-details { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0; }
+.report-details div { padding: 0 var(--space-4); border-left: 1px solid var(--line); }
+.report-details div:first-child { padding-left: 0; border-left: 0; }
+.report-details dt { color: var(--muted); font-size: 8pt; text-transform: uppercase; letter-spacing: .06em; }
+.report-details dd { margin: var(--space-1) 0 0; font-weight: 600; }
+.summary-strip { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); margin-bottom: var(--space-4); }
+.summary-strip div { padding: var(--space-3) var(--space-4); border-left: 1px solid var(--line); }
+.summary-strip div:first-child { border-left: 0; }
+.summary-strip span { display: block; color: var(--muted); font-size: 8pt; }
+.summary-strip strong { display: block; margin-top: var(--space-1); font-size: 11pt; }
+
+/* Current stock uses a fixed grid so numeric columns remain aligned. */
+.report-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.report-table th { background: var(--header-fill); border-bottom: 1px solid var(--line-strong); padding: var(--space-2) 10px; text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: .04em; }
+.report-table td { border-bottom: 1px solid var(--line); padding: var(--space-2) 10px; vertical-align: top; }
+.report-table .number { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.report-table .empty-value { color: var(--muted); }
+.report-table tfoot td { border-top: 2px solid var(--line-strong); border-bottom: 0; background: var(--total-fill); font-weight: 700; }
+.stock-report .col-code { width: 11%; }
+.stock-report .col-item { width: 22%; }
+.stock-report .col-category { width: 14%; }
+.stock-report .col-number { width: 10%; }
+.stock-report .col-unit { width: 8%; }
+.stock-report .col-status { width: 12%; }
+.stock-report .col-money { width: 12%; }
+.badge { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 8pt; font-weight: 600; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+.badge-green { background: var(--green-bg); color: var(--green-ink); }
+.badge-amber { background: var(--amber-bg); color: var(--amber-ink); }
+.badge-red { background: var(--red-bg); color: var(--red-ink); }
+.badge-gray { background: #e8ebee; color: var(--muted); }
+.badge-blue { background: #dcecff; color: #245b9e; }
+.muted { color: var(--muted); }
+.empty { color: var(--muted); padding: var(--space-5) 0; }
+.error { color: var(--red-ink); }
+
+/* Fixed footer is repeated by paged-media engines on every printed page. */
+.report-footer {
+  position: fixed;
+  left: 16mm;
+  right: 16mm;
+  bottom: 8mm;
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid #9aa5b1;
+  color: var(--muted);
+  font-size: 8pt;
+  padding-top: var(--space-2);
+}
+.page-number::after { content: counter(page); }
+.page-count::after { content: counter(pages); }
+
+@media print {
+  @page { size: A4 portrait; margin: 16mm; }
+  :root { background: #fff; }
+  .report-document { width: auto; min-height: 0; margin: 0; padding: 0 0 14mm; box-shadow: none; }
+  .report-header { break-after: avoid; }
+  .report-table { break-inside: auto; }
+  .report-table thead { display: table-header-group; }
+  .report-table tfoot { display: table-footer-group; }
+  .report-table tr { break-inside: avoid; page-break-inside: avoid; }
+  .report-table tfoot tr { break-before: avoid; page-break-before: avoid; }
+  .report-footer { left: 16mm; right: 16mm; bottom: 8mm; }
+}

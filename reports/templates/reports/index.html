@@ -1,14 +1,18 @@
 {% extends "base.html" %}
-{% load ui %}
+{% load static ui %}
 {% block title %}Reports{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'reports/print.css' %}">{% endblock %}
 {% block content %}
 <div class="page-header">
-  <div><h1>Reports</h1><p>Purchases, usage, dispatches and stock balances</p></div>
-  {% if result and result.rows %}
+  <div><h1>Reports</h1><p>Purchases, usage, petty cash, dispatches and stock balances</p></div>
   <div class="no-print" style="display:flex;gap:.5rem">
+    {% if view_report %}<a class="btn btn-secondary" href="{% qs view=None %}">Edit filters</a>
+    {% else %}<a class="btn btn-secondary" href="{% qs view='1' %}">View Report</a>{% endif %}
+    {% if result and result.rows %}
     <a class="btn btn-secondary" href="{% qs format='csv' %}">Download CSV</a>
-    <button class="btn btn-secondary" type="button" onclick="window.print()">Print</button>
-  </div>{% endif %}
+    <button class="btn btn-secondary" id="report-print" type="button">Print</button>
+    {% endif %}
+  </div>
 </div>
 
 <div class="no-print" style="display:flex;overflow-x:auto;border-bottom:1px solid var(--s200);margin-bottom:1.25rem">
@@ -43,6 +47,11 @@
       <select name="by" aria-label="Group by" style="width:auto" onchange="this.form.submit()"><option value="item" {% if f.by != 'department' %}selected{% endif %}>By item</option><option value="department" {% if f.by == 'department' %}selected{% endif %}>By department</option></select>
       {% if opts.departments %}<select name="department" aria-label="Department" style="width:auto" onchange="this.form.submit()"><option value="">All departments</option>
         {% for d in opts.departments %}<option value="{{ d }}" {% if f.department == d %}selected{% endif %}>{{ d }}</option>{% endfor %}</select>{% endif %}
+    {% elif rtype == 'petty_cash' %}
+      {% if opts.branches %}<select name="branch" aria-label="Branch" style="width:auto" onchange="this.form.submit()"><option value="">All branches</option>
+        {% for b in opts.branches %}<option value="{{ b.pk }}" {% if f.branch == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>{% endfor %}</select>{% endif %}
+      <select name="entry_type" aria-label="Type" style="width:auto" onchange="this.form.submit()"><option value="">All types</option>
+        {% for value, info in opts.petty_cash_types.items %}<option value="{{ value }}" {% if f.entry_type == value %}selected{% endif %}>{{ info.label }}</option>{% endfor %}</select>
     {% elif rtype == 'dispatches' and other_branches %}
       <select name="destination" aria-label="Branch" style="width:auto" onchange="this.form.submit()"><option value="">All branches</option>
         {% for b in other_branches %}<option value="{{ b.pk }}" {% if f.destination == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>{% endfor %}</select>
@@ -52,17 +61,20 @@
 
 {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
 
-<div class="print-only" style="margin-bottom:1rem">
-  <h2 style="margin:0">{{ meta.label }} report</h2>
-  <p class="small muted">{{ scope }} · {{ period }} · Printed {{ printed }}</p>
+<div class="reports-print-document">
+<div class="report-heading{% if not view_report %} print-only{% endif %}">
+  <div class="report-company">{{ app_settings.company_name|default:"Heritage Crops Plantations (Pvt) Ltd" }}</div>
+  <h2>{{ meta.title }} Report</h2>
+  <p class="report-subtitle">{{ meta.description }}</p>
+  <div class="report-meta"><span><b>Scope:</b> {{ scope }}</span><span><b>Period:</b> {{ period }}</span><span><b>Generated:</b> {{ printed }}</span></div>
 </div>
 
 {% if result %}
   {% if not rows %}
-    <div class="card empty"><h3>Nothing to report</h3><p>{% if meta.dated %}No records in this period. Try a wider date range.{% else %}There are no items to show.{% endif %}</p></div>
+    <div class="card empty report-content"><h3>Nothing to report</h3><p>{% if meta.dated %}No records in this period. Try a wider date range.{% else %}There are no items to show.{% endif %}</p></div>
   {% else %}
     <p class="no-print small muted">{{ scope }} · {{ period }} · {{ rows|length|plural:"row" }}</p>
-    <div class="card table-wrap"><table class="data">
+    <div class="card table-wrap report-content"><table class="data">
       <thead><tr>{% for c in columns %}<th class="{% if c.type == 'number' or c.type == 'money' %}num{% endif %}">{{ c.label }}</th>{% endfor %}</tr></thead>
       <tbody>{% for r in rows %}<tr>{% for cell in r.cells %}
         <td class="{% if cell.col.type == 'number' or cell.col.type == 'money' %}num nowrap{% endif %}{% if cell.col.key == 'name' or cell.col.key == 'supplier' or cell.col.key == 'department' %} strong{% endif %}">{% report_cell cell.col cell.value %}</td>{% endfor %}</tr>{% endfor %}</tbody>
@@ -71,7 +83,10 @@
     </table></div>
     {% if rtype == 'balances' %}<p class="small muted">Stock value is the quantity multiplied by each item's last purchase cost. Items with no recorded cost show a dash.</p>
     {% elif rtype == 'purchases' %}<p class="small muted">Cancelled purchases are left out. "Received value" counts only what has actually arrived.</p>
-    {% elif rtype == 'usage' %}<p class="small muted">Cancelled issues are left out. Quantities are not added together because the units differ.</p>{% endif %}
+    {% elif rtype == 'usage' %}<p class="small muted">Cancelled issues are left out. Quantities are not added together because the units differ.</p>
+    {% elif rtype == 'petty_cash' %}<p class="small muted">Positive amounts add cash; negative amounts spend or reverse cash. The total is the net movement.</p>{% endif %}
   {% endif %}
 {% endif %}
+</div>
 {% endblock %}
+{% block scripts %}<script src="{% static 'reports/reports.js' %}"></script>{% endblock %}

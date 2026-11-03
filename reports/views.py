@@ -53,6 +53,10 @@ def index(request):
         elif rtype == 'usage':
             result = services.usage_report_data(rng, branch_id=own_branch, department=g.get('department', ''), by=g.get('by', 'item'))
             scope = user.branch.name if branch_side else 'All issues'
+        elif rtype == 'petty_cash':
+            branch = own_branch if branch_side else _int(g.get('branch'))
+            result = services.petty_cash_report(rng, branch_id=branch, entry_type=g.get('entry_type', ''))
+            scope = user.branch.name if branch_side else ('Selected branch' if branch else 'All branches')
         else:
             dest = own_branch if branch_side else _int(g.get('destination'))
             result = services.dispatches_report(rng, destination_id=dest)
@@ -75,12 +79,15 @@ def index(request):
     ctx = {
         'tabs': tabs, 'rtype': rtype, 'meta': meta, 'f': {'from': f, 'to': t, 'branch': g.get('branch', ''), 'low': g.get('low') == '1',
                'supplier': g.get('supplier', ''), 'by': g.get('by', ''), 'department': g.get('department', ''),
-               'destination': g.get('destination', '')},
+               'destination': g.get('destination', ''), 'entry_type': g.get('entry_type', '')},
         'opts': opts, 'error': error, 'result': result, 'columns': columns, 'rows': rows, 'totals': totals,
         'total_cells': [{'col': c, 'first': i == 0, 'has': c['key'] in totals, 'value': totals.get(c['key'])} for i, c in enumerate(columns)],
         'scope': scope, 'period': period, 'quick': [('This month', *ranges['month']), ('Last month', *ranges['last_month']),
                                                     ('This year', *ranges['year']), ('All time', *ranges['all'])],
         'branch_side': branch_side, 'printed': timezone.localtime().strftime('%d/%m/%Y %H:%M'),
+        'view_report': g.get('view') == '1',
         'other_branches': [b for b in opts['branches'] if b.type != 'main'],
     }
+    if ctx['view_report']:
+        return render(request, 'reports/report.html', ctx)
     return render(request, 'reports/index.html', ctx)

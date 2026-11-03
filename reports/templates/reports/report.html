@@ -1,0 +1,62 @@
+{% load static ui %}
+{% regroup result.rows by status as stock_statuses %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ meta.title }} Report · {{ app_settings.company_name }}</title>
+  <link rel="stylesheet" href="{% static 'reports/report.css' %}">
+</head>
+<body>
+<main class="report-document{% if rtype == 'balances' %} stock-report{% endif %}">
+  <header class="report-header">
+    <div class="company-name">{{ app_settings.company_name }}</div>
+    <h1>{{ meta.title }} Report</h1>
+    <p class="subtitle">{{ meta.description }}</p>
+    <dl class="report-details">
+      <div><dt>Scope</dt><dd>{{ scope }}</dd></div>
+      <div><dt>Reporting period</dt><dd>{{ period }}</dd></div>
+      <div><dt>Generated</dt><dd>{% now "d M Y, H:i" %}</dd></div>
+    </dl>
+  </header>
+
+  {% if error %}
+    <p class="error">{{ error }}</p>
+  {% elif result and rows %}
+    {% if rtype == 'balances' %}
+      <section class="summary-strip" aria-label="Stock summary">
+        <div><span>Total items</span><strong>{{ rows|length }}</strong></div>
+        <div><span>Out of stock</span><strong>{% for group in stock_statuses %}{% if group.grouper == 'Out of stock' %}{{ group.list|length }}{% endif %}{% endfor %}</strong></div>
+        <div><span>Below minimum</span><strong>{% for group in stock_statuses %}{% if group.grouper == 'Low stock' %}{{ group.list|length }}{% endif %}{% endfor %}</strong></div>
+        <div><span>Total value</span><strong>{% for c in columns %}{% if c.key == 'value' %}{% report_cell c totals.value %}{% endif %}{% endfor %}</strong></div>
+      </section>
+    {% endif %}
+
+    <table class="report-table">
+      {% if rtype == 'balances' %}
+        <colgroup><col class="col-code"><col class="col-item"><col class="col-category"><col class="col-number"><col class="col-unit"><col class="col-number"><col class="col-status"><col class="col-money"><col class="col-money"></colgroup>
+      {% endif %}
+      <thead><tr>{% for c in columns %}<th class="{% if c.type == 'number' or c.type == 'money' %}number{% endif %}">{{ c.label }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for r in rows %}<tr>{% for cell in r.cells %}<td class="{% if cell.col.type == 'number' or cell.col.type == 'money' %}number{% endif %}{% if cell.value is None or cell.value == '' %} empty-value{% endif %}">{% report_cell cell.col cell.value %}</td>{% endfor %}</tr>{% endfor %}</tbody>
+      {% if totals %}
+        <tfoot>
+          {% if rtype == 'balances' %}
+            <tr><td colspan="8">Total stock value</td><td class="number">{% for c in columns %}{% if c.key == 'value' %}{% report_cell c totals.value %}{% endif %}{% endfor %}</td></tr>
+          {% else %}
+            <tr>{% for t in total_cells %}<td class="{% if t.col.type == 'number' or t.col.type == 'money' %}number{% endif %}">{% if t.first %}Total{% elif t.has %}{% report_cell t.col t.value %}{% endif %}</td>{% endfor %}</tr>
+          {% endif %}
+        </tfoot>
+      {% endif %}
+    </table>
+  {% else %}
+    <p class="empty">No items to display</p>
+  {% endif %}
+
+  <footer class="report-footer">
+    <span>{{ app_settings.company_name }} · Official report</span>
+    <span>Page <span class="page-number"></span> of <span class="page-count"></span></span>
+  </footer>
+</main>
+</body>
+</html>

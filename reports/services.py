@@ -1,9 +1,13 @@
 """Builds the report inputs from the database and hands them to the pure rules in core.rules.report_rules."""
+from decimal import Decimal
+
 from accounts.models import Branch
 from catalog.models import Item, Supplier
+from core.labels import PETTY_CASH_ENTRY_LABELS
 from core.rules.report_rules import balance_report, dispatch_report, purchase_report, usage_report
 from inventory.models import OfficeIssue, Purchase
 from inventory.services.stock import get_balances
+from pettycash.models import PettyCashEntry
 
 REPORTS = {
     'balances': {'label': 'Current stock', 'title': 'Current stock', 'dated': False,
@@ -13,6 +17,8 @@ REPORTS = {
     'usage': {'label': 'Usage', 'title': 'Usage', 'dated': True, 'description': 'What was handed out to staff'},
     'dispatches': {'label': 'Dispatches', 'title': 'Dispatches', 'dated': True, 'needs_branch_module': True,
                    'description': 'What was sent to each branch and what arrived'},
+    'petty_cash': {'label': 'Petty cash', 'title': 'Petty cash', 'dated': True,
+                   'description': 'Cash received, spent and reversed'},
 }
 
 
@@ -75,6 +81,33 @@ def dispatches_report(rng, *, destination_id=None):
     return dispatch_report(data)
 
 
+def petty_cash_report(rng, *, branch_id=None, entry_type=''):
+    qs = PettyCashEntry.objects.select_related('branch', 'created_by').order_by('-entry_date', '-created_at', '-id')
+    if branch_id:
+        qs = qs.filter(branch_id=branch_id)
+    if entry_type in PETTY_CASH_ENTRY_LABELS:
+        qs = qs.filter(type=entry_type)
+    qs = _apply_dates(qs, 'entry_date', rng)
+    rows = [{
+        'date': entry.entry_date.strftime('%Y-%m-%d'),
+        'branch': entry.branch.name,
+        'description': entry.description or '—',
+        'type': PETTY_CASH_ENTRY_LABELS.get(entry.type, {}).get('label', entry.type),
+        'amount': entry.amount,
+    } for entry in qs]
+    return {
+        'columns': [
+            {'key': 'date', 'label': 'Date', 'type': 'code'},
+            {'key': 'branch', 'label': 'Branch'},
+            {'key': 'description', 'label': 'Description'},
+            {'key': 'type', 'label': 'Type'},
+            {'key': 'amount', 'label': 'Amount', 'type': 'money', 'sum': True},
+        ],
+        'rows': rows,
+        'totals': {'amount': sum((row['amount'] for row in rows), Decimal('0.00'))},
+    }
+
+
 def filter_options(user_branch_id=None):
     """Choices for the filter boxes (main-office users get branch and supplier lists)."""
     branch_side = bool(user_branch_id)
@@ -84,4 +117,5 @@ def filter_options(user_branch_id=None):
     if branch_side:
         qs = qs.filter(branch_id=user_branch_id)
     departments = sorted({d for d in qs.values_list('department', flat=True).distinct() if d}, key=str.lower)
-    return {'branches': branches, 'suppliers': suppliers, 'departments': departments}
+    return {'branches': branches, 'suppliers': suppliers, 'departments': departments,
+            'petty_cash_types': PETTY_CASH_ENTRY_LABELS}
