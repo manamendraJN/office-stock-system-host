@@ -29,6 +29,7 @@ class Command(BaseCommand):
         from core.models import AuditLog, Counter
         from inventory.models import OfficeIssue, Purchase, StockLedger
         from pettycash.models import PettyCashEntry, PettyCashRequest
+        from vouchers.models import ExpenseCategory, Voucher, VoucherEvent, VoucherSchedule
 
         if not settings.DEBUG:
             raise CommandError('Clearing data is disabled unless DJANGO_DEBUG is on (it is off in production).')
@@ -53,9 +54,10 @@ class Command(BaseCommand):
 
         with transaction.atomic():
             # Documents first (dispatches point at requests). Append-only tables use the deliberate clean-up path.
-            for model in (PettyCashEntry, StockLedger, AuditLog):
+            for model in (VoucherEvent, PettyCashEntry, StockLedger, AuditLog):
                 report(model._meta.label, model.objects.all().unsafe_delete())
-            for model in (PettyCashRequest, Dispatch, Request, Purchase, OfficeIssue, Item, Supplier, Category, Counter):
+            for model in (Voucher, VoucherSchedule, ExpenseCategory, PettyCashRequest, Dispatch, Request,
+                          Purchase, OfficeIssue, Item, Supplier, Category, Counter):
                 report(model._meta.label, model.objects.all().delete()[0])
             report('accounts.User', User.objects.exclude(role=ROLES.SUPER_ADMIN).delete()[0])
             report('accounts.Branch', Branch.objects.exclude(pk__in=keep_branches).delete()[0])

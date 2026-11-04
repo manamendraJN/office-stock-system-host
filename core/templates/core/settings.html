@@ -27,6 +27,28 @@
     </form>
   </div></div>
 
+  <div class="card"><div class="card-head"><h2>Payment Voucher module</h2></div><div class="card-body" style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:space-between;align-items:flex-start">
+    <div style="max-width:36rem;font-size:.875rem" class="muted">
+      <p style="margin:0 0 .5rem;font-weight:500;color:var(--s900)">Status: {% if s.payment_voucher_module_enabled %}{% badge "On" "green" %}{% else %}{% badge "Off" "gray" %}{% endif %}</p>
+      <p style="margin:0">Controls access to payment vouchers, approvals, printing and schedules. Turning the module off hides its navigation and blocks all voucher routes without changing existing records, permissions or approval history.</p>
+    </div>
+    <form method="post" data-confirm="{% if s.payment_voucher_module_enabled %}Switch the Payment Voucher module off? Existing records and history will be retained.{% else %}Switch the Payment Voucher module on? Access still requires individual voucher permissions.{% endif %}">
+      {% csrf_token %}<input type="hidden" name="action" value="payment_voucher_module_toggle">
+      <button class="btn {% if s.payment_voucher_module_enabled %}btn-secondary{% endif %}" type="submit">{% if s.payment_voucher_module_enabled %}Switch off{% else %}Switch on{% endif %}</button>
+    </form>
+  </div></div>
+
+  <div class="card"><div class="card-head"><h2>Voucher self-approval</h2></div><div class="card-body" style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:space-between;align-items:flex-start">
+    <div style="max-width:36rem;font-size:.875rem" class="muted">
+      <p style="margin:0 0 .5rem;font-weight:500;color:var(--s900)">Status: {% if s.payment_voucher_self_approval_enabled %}{% badge "On" "green" %}{% else %}{% badge "Off" "gray" %}{% endif %}</p>
+      <p style="margin:0">When enabled, only voucher creators who also have the self-approval permission may approve their own draft. When disabled, the backend always requires manager approval. Existing approvals are not changed.</p>
+    </div>
+    <form method="post" data-confirm="{% if s.payment_voucher_self_approval_enabled %}Disable self-approval? Future vouchers will require manager approval.{% else %}Enable self-approval? Users still need the individual self-approval permission.{% endif %}">
+      {% csrf_token %}<input type="hidden" name="action" value="payment_voucher_self_approval_toggle">
+      <button class="btn {% if s.payment_voucher_self_approval_enabled %}btn-secondary{% endif %}" type="submit">{% if s.payment_voucher_self_approval_enabled %}Disable{% else %}Enable{% endif %}</button>
+    </form>
+  </div></div>
+
   <div class="card"><div class="card-head"><h2>Company</h2></div><div class="card-body">
     <form method="post" class="stack narrow" novalidate>
       {% csrf_token %}<input type="hidden" name="action" value="company">

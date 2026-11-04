@@ -283,7 +283,8 @@ def _branch_has_documents(branch):
 
 
 # ---------------------------------------------------------------- settings
-def update_settings(request, *, branch_module_enabled=None, audit_logging_enabled=None, company_name=None):
+def update_settings(request, *, branch_module_enabled=None, audit_logging_enabled=None, company_name=None,
+                    payment_voucher_module_enabled=None, payment_voucher_self_approval_enabled=None):
     from branchops.models import Dispatch, Request
     settings = Setting.get()
     if branch_module_enabled is False and settings.branch_module_enabled:
@@ -296,7 +297,9 @@ def update_settings(request, *, branch_module_enabled=None, audit_logging_enable
         if problem:
             raise Conflict(problem)
     old = {'branch_module_enabled': settings.branch_module_enabled, 'audit_logging_enabled': settings.audit_logging_enabled,
-           'company_name': settings.company_name}
+           'company_name': settings.company_name,
+           'payment_voucher_module_enabled': settings.payment_voucher_module_enabled,
+           'payment_voucher_self_approval_enabled': settings.payment_voucher_self_approval_enabled}
     new = {}
     if branch_module_enabled is not None:
         settings.branch_module_enabled = branch_module_enabled
@@ -307,6 +310,12 @@ def update_settings(request, *, branch_module_enabled=None, audit_logging_enable
     if company_name is not None:
         settings.company_name = company_name
         new['company_name'] = company_name
+    if payment_voucher_module_enabled is not None:
+        settings.payment_voucher_module_enabled = payment_voucher_module_enabled
+        new['payment_voucher_module_enabled'] = payment_voucher_module_enabled
+    if payment_voucher_self_approval_enabled is not None:
+        settings.payment_voucher_self_approval_enabled = payment_voucher_self_approval_enabled
+        new['payment_voucher_self_approval_enabled'] = payment_voucher_self_approval_enabled
     settings.save()
     # Turning logging off is itself always recorded, so there is a trace of who stopped it.
     log_audit(request, 'settings.update', 'Setting', settings.pk, old_value=old, new_value=new,

@@ -14,7 +14,7 @@ def app(request):
     perms = getattr(request, 'perms', [])
     nav = []
     path = request.path
-    for n in visible_nav(user, perms, settings.branch_module_enabled):
+    for n in visible_nav(user, perms, settings.branch_module_enabled, settings.payment_voucher_module_enabled):
         try:
             url = reverse(n['url'])
         except NoReverseMatch:

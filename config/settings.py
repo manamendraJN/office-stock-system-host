@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'inventory',
     'branchops',
     'pettycash',
+    'vouchers',
     'reports',
 ]
 

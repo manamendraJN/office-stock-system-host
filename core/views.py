@@ -100,6 +100,15 @@ def settings_view(request):
                 on = settings_obj.branch_module_enabled
                 account_services.update_settings(request, branch_module_enabled=not on)
                 messages.success(request, 'Branch module switched off' if on else 'Branch module switched on')
+            elif action == 'payment_voucher_module_toggle':
+                on = settings_obj.payment_voucher_module_enabled
+                account_services.update_settings(request, payment_voucher_module_enabled=not on)
+                messages.success(request, 'Payment Voucher module switched off' if on
+                                 else 'Payment Voucher module switched on')
+            elif action == 'payment_voucher_self_approval_toggle':
+                on = settings_obj.payment_voucher_self_approval_enabled
+                account_services.update_settings(request, payment_voucher_self_approval_enabled=not on)
+                messages.success(request, 'Voucher self-approval disabled' if on else 'Voucher self-approval enabled')
             elif action == 'company' and company_form.is_valid():
                 account_services.update_settings(request, company_name=company_form.cleaned_data['company_name'])
                 messages.success(request, 'Company name saved')

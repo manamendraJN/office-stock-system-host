@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Print {{ voucher.number }}{% endblock %}
+{% block head %}<style>
+  .voucher-paper { background:#fff; border:1px solid #dfe5e0; margin:1rem auto; max-width:900px; padding:2.5rem; }
+  .voucher-heading { border-bottom:3px solid #254c3b; margin-bottom:1.5rem; padding-bottom:1rem; }
+  .voucher-heading h1 { margin:0; } .voucher-amount { font-size:1.25rem;font-weight:700; }
+  .voucher-signature { display:flex;gap:4rem;margin-top:4rem; } .voucher-signature div { border-top:1px solid #718078;min-width:180px;padding-top:.5rem; }
+  @media print { .sidebar,.topbar,.form-actions,footer { display:none!important; } body,.shell,.main-col,.content { background:#fff!important;display:block!important;margin:0!important;padding:0!important; } .voucher-paper { border:0;box-shadow:none;margin:0;max-width:none;padding:0; } }
+</style>{% endblock %}
+{% block content %}
+<div class="form-actions" style="justify-content:flex-end"><button class="btn" type="button" data-print>Print</button><a class="btn btn-secondary" href="{% url 'vouchers:voucher_detail' voucher.pk %}">Back to voucher</a></div>
+<article class="voucher-paper">
+  <header class="voucher-heading"><div class="eyebrow">{{ app_settings.company_name }}</div><h1>PAYMENT VOUCHER</h1><div>{{ voucher.number }} · {{ voucher.date|date:"j F Y" }}</div></header>
+  <dl class="detail-list form-grid">
+    <div><dt>Payee</dt><dd>{{ voucher.payee }}</dd></div><div><dt>Pay to</dt><dd>{{ voucher.to }}</dd></div>
+    <div><dt>Amount</dt><dd class="voucher-amount">Rs. {{ voucher.amount|floatformat:2 }}</dd></div><div><dt>Category</dt><dd>{{ voucher.category.name }}</dd></div>
+    <div><dt>Payment method</dt><dd>{{ voucher.get_method_of_payment_display }}</dd></div><div><dt>Account details</dt><dd>{{ voucher.account_details|default:"—" }}</dd></div>
+    <div><dt>Cheque number</dt><dd>{{ voucher.cheque_number|default:"—" }}</dd></div><div><dt>Branch</dt><dd>{{ voucher.branch.name }}</dd></div>
+    <div><dt>Purpose</dt><dd>{{ voucher.being }}</dd></div><div><dt>Prepared by</dt><dd>{{ voucher.prepared_by.name }}</dd></div>
+    <div><dt>Approved by</dt><dd>{{ voucher.approved_by.name }}</dd></div><div><dt>Approved at</dt><dd>{{ voucher.approved_at|date:"j F Y, H:i" }}</dd></div>
+  </dl>
+  <div class="voucher-signature"><div>Payee signature</div><div>Authorized signature</div></div>
+</article>
+{% endblock %}

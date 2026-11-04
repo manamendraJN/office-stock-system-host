@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{{ voucher.number }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>{{ voucher.number }}</h1><p><span class="status status-{{ voucher.status }}">{{ voucher.get_status_display }}</span> · Payment date {{ voucher.date|date:"j M Y" }}</p></div>
+  <div class="form-actions">
+    {% if can_edit %}<a class="btn btn-secondary" href="{% url 'vouchers:voucher_update' voucher.pk %}">Edit</a>{% endif %}
+    {% if can_print %}<a class="btn" href="{% url 'vouchers:voucher_print' voucher.pk %}">Print voucher</a>{% endif %}
+  </div>
+</div>
+{% if voucher.status == "rejected" %}<div class="alert alert-error"><strong>Rejected:</strong> {{ voucher.rejection_reason }}</div>{% endif %}
+<div class="card card-body">
+  <dl class="detail-list form-grid">
+    <div><dt>Payee</dt><dd>{{ voucher.payee }}</dd></div><div><dt>Pay to</dt><dd>{{ voucher.to }}</dd></div>
+    <div><dt>Amount</dt><dd>Rs. {{ voucher.amount|floatformat:2 }}</dd></div><div><dt>Category</dt><dd>{{ voucher.category.name }}</dd></div>
+    <div><dt>Payment method</dt><dd>{{ voucher.get_method_of_payment_display }}{% if voucher.cash %} · Cash payment{% endif %}</dd></div>
+    <div><dt>Account details</dt><dd>{{ voucher.account_details|default:"—" }}</dd></div>
+    <div><dt>Cheque number</dt><dd>{{ voucher.cheque_number|default:"—" }}</dd></div>
+    <div><dt>Branch</dt><dd>{{ voucher.branch.name }}</dd></div><div><dt>Purpose</dt><dd>{{ voucher.being }}</dd></div>
+    <div><dt>Created by</dt><dd>{{ voucher.prepared_by.name }}</dd></div>
+    <div><dt>Approver</dt><dd>{{ voucher.approved_by.name|default:voucher.approver.name|default:"—" }}</dd></div>
+    <div><dt>Approval date</dt><dd>{{ voucher.approved_at|date:"j M Y, H:i"|default:"—" }}</dd></div>
+  </dl>
+</div>
+{% if can_submit or can_self_approve %}
+<div class="card card-body form-actions" style="margin-top:1rem">
+  {% if can_submit %}<form method="post" action="{% url 'vouchers:voucher_action' voucher.pk 'submit' %}">{% csrf_token %}<button class="btn" type="submit">Submit for approval</button></form>{% endif %}
+  {% if can_self_approve %}<form method="post" action="{% url 'vouchers:voucher_action' voucher.pk 'self_approve' %}">{% csrf_token %}<button class="btn btn-secondary" type="submit">Approve and print</button></form>{% endif %}
+</div>
+{% endif %}
+{% if can_approve %}
+<div class="card card-body stack" style="margin-top:1rem">
+  <div class="form-actions">
+    <form method="post" action="{% url 'vouchers:voucher_action' voucher.pk 'approve' %}">{% csrf_token %}<button class="btn" type="submit">Approve voucher</button></form>
+  </div>
+  <form method="post" action="{% url 'vouchers:voucher_action' voucher.pk 'reject' %}" class="stack">
+    {% csrf_token %}<label class="lbl" for="{{ reject_form.reason.id_for_label }}">{{ reject_form.reason.label }}</label>
+    {{ reject_form.reason }}{% for error in reject_form.reason.errors %}<div class="err">{{ error }}</div>{% endfor %}
+    <div><button class="btn btn-secondary" type="submit">Reject voucher</button></div>
+  </form>
+</div>
+{% endif %}
+<section class="card" style="margin-top:1rem"><div class="card-header"><h2>Approval history</h2></div><div class="card-body">
+  {% for event in events %}<div class="approval-step"><strong>{{ event.get_action_display|default:event.action|title }}</strong><span>{{ event.actor.name }} · {{ event.created_at|date:"j M Y, H:i" }}{% if event.note %} · {{ event.note }}{% endif %}</span></div>
+  {% empty %}<p class="muted">No history available.</p>{% endfor %}
+</div></section>
+{% endblock %}

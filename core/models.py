@@ -50,6 +50,8 @@ class Setting(models.Model):
     """The single settings row (key 'app')."""
     key = models.CharField(max_length=20, default='app', unique=True)
     branch_module_enabled = models.BooleanField(default=False)
+    payment_voucher_module_enabled = models.BooleanField(default=False)
+    payment_voucher_self_approval_enabled = models.BooleanField(default=False)
     audit_logging_enabled = models.BooleanField(default=True)
     stock_retention_lock_until = models.DateTimeField(null=True, blank=True)
     company_name = models.CharField(max_length=120, default='Our Company')

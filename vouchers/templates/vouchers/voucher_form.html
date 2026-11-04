@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>{{ title }}</h1><p>Payment details and approval routing</p></div></div>
+<form method="post" class="card card-body stack medium" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <div class="form-grid">
+    {% for field in form %}
+      {% if field.name == "cash" or field.name == "receipt_attached" %}
+      <div class="field"><label class="check">{{ field }} {{ field.label }}</label>{% for error in field.errors %}<div class="err" role="alert">{{ error }}</div>{% endfor %}</div>
+      {% else %}
+      <div class="field"><label class="lbl" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<div class="hint">{{ field.help_text }}</div>{% endif %}{% for error in field.errors %}<div class="err" role="alert">{{ error }}</div>{% endfor %}</div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  <div class="notice">A voucher is not printable until it is approved. Submitting routes it to the selected manager.</div>
+  <div class="form-actions">
+    <a class="btn btn-secondary" href="{% if voucher %}{% url 'vouchers:voucher_detail' voucher.pk %}{% else %}{% url 'vouchers:voucher_list' %}{% endif %}">Cancel</a>
+    <button class="btn btn-secondary" name="action" value="draft" type="submit">Save draft</button>
+    {% if can_self_approve %}<button class="btn btn-secondary" name="action" value="self_approve" type="submit">Approve and save</button>{% endif %}
+    <button class="btn" name="action" value="submit" type="submit">Submit for approval</button>
+  </div>
+</form>
+{% endblock %}

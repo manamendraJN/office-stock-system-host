@@ -20,6 +20,8 @@ STAFF_PERMISSIONS = (
     'requests.review',
     'dispatches.manage',
     'petty_cash.view', 'petty_cash.approve', 'petty_cash.configure',
+    'vouchers.view', 'vouchers.create', 'vouchers.approve', 'vouchers.print',
+    'vouchers.schedule', 'vouchers.self_approve', 'vouchers.configure',
 )
 
 # Branch-side features: only for branch users, always limited to their own branch.
@@ -40,6 +42,12 @@ IMPLIES = {
     'stock.adjust': ['stock.view'],
     'petty_cash.approve': ['petty_cash.view'],
     'petty_cash.configure': ['petty_cash.view'],
+    'vouchers.create': ['vouchers.view'],
+    'vouchers.approve': ['vouchers.view'],
+    'vouchers.print': ['vouchers.view'],
+    'vouchers.schedule': ['vouchers.create'],
+    'vouchers.self_approve': ['vouchers.create', 'vouchers.view'],
+    'vouchers.configure': ['vouchers.view'],
 }
 
 
@@ -56,7 +64,8 @@ DEFAULT_ROLES = (
     {
         'key': ROLES.STOCK_OFFICER, 'name': 'Stock Officer', 'side': SIDES.MAIN,
         'description': 'Records stock, handles requests and dispatches',
-        'permissions': [x for x in STAFF_PERMISSIONS if x not in ('petty_cash.approve', 'petty_cash.configure')]
+        'permissions': [x for x in STAFF_PERMISSIONS if x not in ('petty_cash.approve', 'petty_cash.configure')
+                        and not x.startswith('vouchers.')]
                        + list(SHARED_PERMISSIONS),
     },
     {
@@ -99,6 +108,11 @@ FEATURES = (
     {'label': 'Petty cash', 'group': 'staff', 'hint': 'Cash held by the main office and each branch',
      'perms': (('petty_cash.view', 'View all branches'), ('petty_cash.approve', 'Approve requests'),
                ('petty_cash.configure', 'Set the low level'))},
+    {'label': 'Payment vouchers', 'group': 'staff', 'hint': 'Create, review, print and schedule payment vouchers',
+     'perms': (('vouchers.view', 'View vouchers'), ('vouchers.create', 'Create and edit drafts'),
+               ('vouchers.approve', 'Approve or reject assigned vouchers'), ('vouchers.print', 'Print approved vouchers'),
+               ('vouchers.schedule', 'Manage recurring schedules'), ('vouchers.self_approve', 'Self-approve when enabled'),
+               ('vouchers.configure', 'Manage expense categories and budgets'))},
     {'label': 'Requests', 'group': 'branch', 'hint': 'Asking the main office for items',
      'perms': (('requests.create', 'Raise requests'),)},
     {'label': 'Deliveries', 'group': 'branch', 'hint': 'Items arriving at the branch',
@@ -123,6 +137,12 @@ NAV_ITEMS = (
      'perms': ('dispatches.manage', 'dispatches.receive'), 'branch_side': True},
     {'url': 'pettycash:overview', 'match': '/petty-cash/', 'label': 'Petty Cash', 'icon': 'wallet',
      'perms': ('petty_cash.view', 'petty_cash.request', 'petty_cash.approve', 'petty_cash.configure')},
+    {'url': 'vouchers:voucher_list', 'match': '/payment-vouchers/vouchers/', 'label': 'Payment Vouchers', 'icon': 'receipt',
+     'payment_vouchers': True,
+     'perms': ('vouchers.view', 'vouchers.create', 'vouchers.approve', 'vouchers.print')},
+    {'url': 'vouchers:approval_queue', 'match': '/payment-vouchers/approvals/', 'label': 'Voucher Approvals', 'icon': 'inbox',
+     'payment_vouchers': True, 'main_side': True,
+     'perms': ('vouchers.approve',)},
     {'url': 'inventory:stock', 'match': '/stock/', 'label': 'Stock & Movements', 'icon': 'list', 'perms': ('stock.view',)},
     {'url': 'reports:index', 'match': '/reports/', 'label': 'Reports', 'icon': 'chart', 'perms': ('reports.view',)},
     {'url': 'core:audit', 'match': '/audit/', 'label': 'Audit Log', 'icon': 'clock', 'roles': (ROLES.SUPER_ADMIN,)},
@@ -202,11 +222,15 @@ def resolve_permissions(role_def, requested=UNSET, current=None, role_changed=Fa
     return normalize_permissions(base)
 
 
-def visible_nav(user, permissions, branch_module_enabled):
+def visible_nav(user, permissions, branch_module_enabled, payment_voucher_module_enabled=False):
     """The menu entries this user sees."""
     out = []
     for n in NAV_ITEMS:
         if n.get('branch_side') and not branch_module_enabled:
+            continue
+        if n.get('payment_vouchers') and not payment_voucher_module_enabled:
+            continue
+        if n.get('main_side') and is_branch_side(user):
             continue
         if n.get('roles'):
             if user.role not in n['roles']:
