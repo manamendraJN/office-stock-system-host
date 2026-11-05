@@ -19,7 +19,7 @@
     <div><dt>Cheque number</dt><dd>{{ voucher.cheque_number|default:"—" }}</dd></div>
     <div><dt>Branch</dt><dd>{{ voucher.branch.name }}</dd></div><div><dt>Purpose</dt><dd>{{ voucher.being }}</dd></div>
     <div><dt>Created by</dt><dd>{{ voucher.prepared_by.name }}</dd></div>
-    <div><dt>Approver</dt><dd>{{ voucher.approved_by.name|default:voucher.approver.name|default:"—" }}</dd></div>
+    <div><dt>Approver</dt><dd>{% if voucher.approved_by %}{{ voucher.approved_by.name }}{% elif voucher.approver %}{{ voucher.approver.name }}{% else %}—{% endif %}</dd></div>
     <div><dt>Approval date</dt><dd>{{ voucher.approved_at|date:"j M Y, H:i"|default:"—" }}</dd></div>
   </dl>
 </div>

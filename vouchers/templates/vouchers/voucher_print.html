@@ -1,24 +1,62 @@
 {% extends "base.html" %}
 {% block title %}Print {{ voucher.number }}{% endblock %}
 {% block head %}<style>
-  .voucher-paper { background:#fff; border:1px solid #dfe5e0; margin:1rem auto; max-width:900px; padding:2.5rem; }
-  .voucher-heading { border-bottom:3px solid #254c3b; margin-bottom:1.5rem; padding-bottom:1rem; }
-  .voucher-heading h1 { margin:0; } .voucher-amount { font-size:1.25rem;font-weight:700; }
-  .voucher-signature { display:flex;gap:4rem;margin-top:4rem; } .voucher-signature div { border-top:1px solid #718078;min-width:180px;padding-top:.5rem; }
-  @media print { .sidebar,.topbar,.form-actions,footer { display:none!important; } body,.shell,.main-col,.content { background:#fff!important;display:block!important;margin:0!important;padding:0!important; } .voucher-paper { border:0;box-shadow:none;margin:0;max-width:none;padding:0; } }
+  @page { size: A5 portrait; margin: 0; }
+  .voucher-print-actions { display:flex; justify-content:flex-end; gap:.5rem; margin-bottom:1rem; }
+  .voucher-paper { width:148mm; min-height:210mm; margin:0 auto; padding:9mm 10mm 8mm; background:#fff; color:#111; font-family:Arial, Helvetica, sans-serif; }
+  .voucher-header { display:grid; grid-template-columns:30mm 1fr; align-items:center; gap:4mm; padding-bottom:3mm; border-bottom:1px solid #2ba5bd; }
+  .voucher-logo { width:27mm; height:15mm; display:flex; flex-direction:column; justify-content:center; color:#0d708c; line-height:1; text-align:center; }
+  .voucher-logo-mark { display:block; width:20mm; height:6mm; margin:0 auto; }
+  .voucher-logo-name { font-size:2.8mm; font-weight:700; letter-spacing:-.1mm; }
+  .voucher-logo-subtitle { margin-top:1mm; font-size:1.5mm; color:#222; letter-spacing:.05mm; }
+  .voucher-title { text-align:center; color:#176b86; line-height:1.04; }
+  .voucher-title .company { font-size:4.7mm; font-weight:700; }
+  .voucher-title h1 { margin:1mm 0 0; color:#176b86; font-size:4.8mm; font-weight:700; }
+  .voucher-reference { margin:4mm 0 4mm; color:#124861; font-size:3.3mm; font-weight:700; }
+  .voucher-grid { width:100%; border-collapse:collapse; table-layout:fixed; font-size:2.4mm; }
+  .voucher-grid col.label { width:14%; } .voucher-grid col.value { width:36%; }
+  .voucher-grid th, .voucher-grid td { height:8.7mm; padding:1.8mm 2mm; border:1px solid #69bdd0; vertical-align:middle; text-align:left; overflow-wrap:anywhere; }
+  .voucher-grid th { background:#f1f3f2; font-weight:700; white-space:normal; line-height:1.1; }
+  .voucher-grid td { background:#fff; }
+  .voucher-grid .amount { font-size:2.9mm; }
+  .voucher-grid .purpose { height:10mm; }
+  .voucher-signatures { display:grid; grid-template-columns:1fr 1fr; gap:15mm; margin-top:16mm; font-size:2.8mm; }
+  .voucher-signature { padding-top:2mm; border-top:1px solid #555; }
+  .voucher-footer { margin-top:20mm; color:#124861; font-size:2.8mm; }
+  @media screen { .voucher-paper { box-shadow:0 1px 5px rgba(0,0,0,.18); } }
+  @media print {
+    html { background:#fff!important; }
+    body, .shell, .main-col, .content { display:block!important; min-height:0!important; margin:0!important; padding:0!important; background:#fff!important; }
+    .sidebar, .topbar, .scrim, .voucher-print-actions, #scroll-progress, .ambient { display:none!important; }
+    .voucher-paper { box-shadow:none; margin:0; }
+  }
 </style>{% endblock %}
 {% block content %}
-<div class="form-actions" style="justify-content:flex-end"><button class="btn" type="button" data-print>Print</button><a class="btn btn-secondary" href="{% url 'vouchers:voucher_detail' voucher.pk %}">Back to voucher</a></div>
+<div class="voucher-print-actions"><button class="btn" type="button" data-print>Print</button><a class="btn btn-secondary" href="{% url 'vouchers:voucher_detail' voucher.pk %}">Back to voucher</a></div>
 <article class="voucher-paper">
-  <header class="voucher-heading"><div class="eyebrow">{{ app_settings.company_name }}</div><h1>PAYMENT VOUCHER</h1><div>{{ voucher.number }} · {{ voucher.date|date:"j F Y" }}</div></header>
-  <dl class="detail-list form-grid">
-    <div><dt>Payee</dt><dd>{{ voucher.payee }}</dd></div><div><dt>Pay to</dt><dd>{{ voucher.to }}</dd></div>
-    <div><dt>Amount</dt><dd class="voucher-amount">Rs. {{ voucher.amount|floatformat:2 }}</dd></div><div><dt>Category</dt><dd>{{ voucher.category.name }}</dd></div>
-    <div><dt>Payment method</dt><dd>{{ voucher.get_method_of_payment_display }}</dd></div><div><dt>Account details</dt><dd>{{ voucher.account_details|default:"—" }}</dd></div>
-    <div><dt>Cheque number</dt><dd>{{ voucher.cheque_number|default:"—" }}</dd></div><div><dt>Branch</dt><dd>{{ voucher.branch.name }}</dd></div>
-    <div><dt>Purpose</dt><dd>{{ voucher.being }}</dd></div><div><dt>Prepared by</dt><dd>{{ voucher.prepared_by.name }}</dd></div>
-    <div><dt>Approved by</dt><dd>{{ voucher.approved_by.name }}</dd></div><div><dt>Approved at</dt><dd>{{ voucher.approved_at|date:"j F Y, H:i" }}</dd></div>
-  </dl>
-  <div class="voucher-signature"><div>Payee signature</div><div>Authorized signature</div></div>
+  <header class="voucher-header">
+    <div class="voucher-logo" aria-label="Heritage Crops Plantations and Exports">
+      <svg class="voucher-logo-mark" viewBox="0 0 80 46" role="img" aria-hidden="true"><path fill="#78bd3d" d="M38 40C23 31 22 17 33 4c9 10 11 22 5 31z"/><path fill="#50a936" d="M40 40C38 23 48 10 63 7c1 16-7 27-23 33z"/><path fill="#18a5bf" d="M41 39c3-14 12-22 25-23-1 13-9 22-25 23z"/><path fill="#99c93c" d="M39 42C29 32 16 31 6 36c9 9 21 10 33 6z"/></svg><div class="voucher-logo-name">HERITAGE CROPS</div><div class="voucher-logo-subtitle">PLANTATION AND EXPORTS PVT LTD</div>
+    </div>
+    <div class="voucher-title"><div class="company">{{ app_settings.company_name }}</div><h1>PAYMENT VOUCHER</h1></div>
+  </header>
+  <div class="voucher-reference">{{ voucher.number }} · {{ voucher.get_status_display }}</div>
+  <table class="voucher-grid">
+    <colgroup><col class="label"><col class="value"><col class="label"><col class="value"></colgroup>
+    <tbody>
+      <tr><th>Ref No.</th><td>{{ voucher.number }}</td><th>Date</th><td>{{ voucher.date|date:"d-m-Y" }}</td></tr>
+      <tr><th>Amount</th><td class="amount">LKR {{ voucher.amount|floatformat:2 }}</td><th>Status</th><td>{{ voucher.get_status_display }}</td></tr>
+      <tr><th>Cash</th><td>{% if voucher.cash %}Yes{% else %}No{% endif %}</td><th>Method of Payment</th><td>{{ voucher.get_method_of_payment_display }}</td></tr>
+      <tr><th>To</th><td>{{ voucher.to }}</td><th>Account Details</th><td>{{ voucher.account_details|default:"-" }}</td></tr>
+      <tr><th>Cheque No.</th><td>{{ voucher.cheque_number|default:"-" }}</td><th>Receipt Attached</th><td>{% if voucher.receipt_attached %}Yes{% else %}No{% endif %}</td></tr>
+      <tr><th>Being</th><td class="purpose">{{ voucher.being }}</td><th>Category</th><td>{{ voucher.category.name }}</td></tr>
+      <tr><th>Branch</th><td>{{ voucher.branch.name|default:"-" }}</td><th>Payee</th><td>{{ voucher.payee }}</td></tr>
+      <tr><th>Approval Required</th><td>{% if voucher.approver %}Yes{% else %}No{% endif %}</td><th>Assigned Approver</th><td>{{ voucher.approver.name|default:"-" }}</td></tr>
+      <tr><th>Prepared By</th><td>{{ voucher.prepared_by.name }}</td><th>Submitted At</th><td>{{ voucher.approval_requested_at|date:"d-m-Y H:i"|default:"-" }}</td></tr>
+      <tr><th>Approved By</th><td>{{ voucher.approved_by.name|default:"-" }}</td><th>Authorized By</th><td>{{ voucher.approved_by.name|default:"-" }}</td></tr>
+      <tr><th>Payee Signature</th><td>-</td><th>Authorized Signature</th><td>-</td></tr>
+    </tbody>
+  </table>
+  <div class="voucher-footer">{{ app_settings.company_name }}</div>
 </article>
 {% endblock %}
