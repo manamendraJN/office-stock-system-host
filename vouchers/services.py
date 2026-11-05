@@ -277,10 +277,7 @@ def update_schedule(request, schedule_id, form):
                 is_branch_side(request.user) or not has_any(request.user, ['vouchers.approve'])):
             raise Forbidden('You cannot edit this voucher schedule')
         old = _schedule_snapshot(schedule)
-        updated = form.save(commit=False)
-        updated.pk = schedule.pk
-        updated.created_by = schedule.created_by
-        updated.save()
+        updated = form.save()
     log_audit(request, 'payment_voucher.schedule_update', 'VoucherSchedule', updated.pk,
               old_value=old, new_value=_schedule_snapshot(updated))
     return updated
@@ -298,6 +295,50 @@ def advance_date(current, frequency):
     return date(year, month, day)
 
 
+def _generate_due_for_schedule(schedule, today):
+    generated = 0
+    while schedule.is_active and schedule.next_run <= today:
+        due_date = schedule.next_run
+        if schedule.approver_id and schedule.approver_id != schedule.created_by_id \
+                and _valid_approver(schedule.approver):
+            status = Voucher.Status.PENDING
+            approved_by = None
+            approved_at = None
+            submitted_at = timezone.now()
+        elif (not schedule.approver_id and Setting.get().payment_voucher_self_approval_enabled
+              and has_any(schedule.created_by, ['vouchers.self_approve'])):
+            status = Voucher.Status.APPROVED
+            approved_by = schedule.created_by
+            approved_at = timezone.now()
+            submitted_at = None
+        else:
+            raise BadRequest(f'Schedule "{schedule.title}" has no active authorized approver.')
+        voucher, created = Voucher.objects.get_or_create(
+            schedule=schedule, scheduled_for=due_date,
+            defaults={
+                'number': next_number('PV', yearly=True), 'amount': schedule.amount, 'date': due_date,
+                'cash': schedule.cash, 'method_of_payment': schedule.method_of_payment, 'to': schedule.to,
+                'account_details': schedule.account_details, 'cheque_number': schedule.cheque_number,
+                'being': schedule.being, 'payee': schedule.payee, 'category': schedule.category,
+                'branch': schedule.branch, 'prepared_by': schedule.created_by,
+                'approver': schedule.approver if status == Voucher.Status.PENDING else None,
+                'status': status, 'approval_requested_at': submitted_at,
+                'approved_by': approved_by, 'approved_at': approved_at,
+            },
+        )
+        if created:
+            _event(voucher, schedule.created_by,
+                   'submitted' if status == Voucher.Status.PENDING else 'self_approved',
+                   Voucher.Status.DRAFT, f'Generated from schedule: {schedule.title}')
+            log_audit(None, 'payment_voucher.schedule_generate', 'PaymentVoucher', voucher.pk,
+                      new_value={'number': voucher.number, 'scheduled_for': str(due_date)},
+                      actor=schedule.created_by)
+            generated += 1
+        schedule.next_run = advance_date(due_date, schedule.frequency)
+    schedule.save(update_fields=['next_run', 'updated_at'])
+    return generated
+
+
 def generate_due_schedules(today=None):
     _ensure_module()
     today = today or timezone.localdate()
@@ -309,45 +350,7 @@ def generate_due_schedules(today=None):
             with transaction.atomic():
                 schedule = (VoucherSchedule.objects.select_for_update()
                             .select_related('category', 'created_by', 'approver', 'branch').get(pk=schedule_id))
-                while schedule.is_active and schedule.next_run <= today:
-                    due_date = schedule.next_run
-                    if schedule.approver_id and schedule.approver_id != schedule.created_by_id \
-                            and _valid_approver(schedule.approver):
-                        status = Voucher.Status.PENDING
-                        approved_by = None
-                        approved_at = None
-                        submitted_at = timezone.now()
-                    elif (not schedule.approver_id and Setting.get().payment_voucher_self_approval_enabled
-                          and has_any(schedule.created_by, ['vouchers.self_approve'])):
-                        status = Voucher.Status.APPROVED
-                        approved_by = schedule.created_by
-                        approved_at = timezone.now()
-                        submitted_at = None
-                    else:
-                        raise BadRequest(f'Schedule "{schedule.title}" has no active authorized approver.')
-                    voucher, created = Voucher.objects.get_or_create(
-                        schedule=schedule, scheduled_for=due_date,
-                        defaults={
-                            'number': next_number('PV', yearly=True), 'amount': schedule.amount, 'date': due_date,
-                            'cash': schedule.cash, 'method_of_payment': schedule.method_of_payment, 'to': schedule.to,
-                            'account_details': schedule.account_details, 'cheque_number': schedule.cheque_number,
-                            'being': schedule.being, 'payee': schedule.payee, 'category': schedule.category,
-                            'branch': schedule.branch, 'prepared_by': schedule.created_by,
-                            'approver': schedule.approver if status == Voucher.Status.PENDING else None,
-                            'status': status, 'approval_requested_at': submitted_at,
-                            'approved_by': approved_by, 'approved_at': approved_at,
-                        },
-                    )
-                    if created:
-                        _event(voucher, schedule.created_by,
-                               'submitted' if status == Voucher.Status.PENDING else 'self_approved',
-                               Voucher.Status.DRAFT, f'Generated from schedule: {schedule.title}')
-                        log_audit(None, 'payment_voucher.schedule_generate', 'PaymentVoucher', voucher.pk,
-                                  new_value={'number': voucher.number, 'scheduled_for': str(due_date)},
-                                  actor=schedule.created_by)
-                        generated += 1
-                    schedule.next_run = advance_date(due_date, schedule.frequency)
-                schedule.save(update_fields=['next_run', 'updated_at'])
+                generated += _generate_due_for_schedule(schedule, today)
         except BadRequest as exc:
             errors.append(str(exc))
     return generated, errors

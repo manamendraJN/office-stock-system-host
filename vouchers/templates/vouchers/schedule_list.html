@@ -1,13 +1,24 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Voucher schedules{% endblock %}
 {% block content %}
-<div class="page-header"><div><h1>Voucher schedules</h1><p>Recurring payment vouchers are generated on their scheduled date and follow the same approval workflow.</p></div>
-  <a class="btn" href="{% url 'vouchers:schedule_create' %}">New schedule</a></div>
-<div class="card"><div class="table-responsive"><table class="table">
+<div class="page-header">
+  <div><h1>Voucher schedules</h1><p>Recurring payment vouchers are generated on their scheduled date and follow the same approval workflow.</p></div>
+  <div class="form-actions"><a class="btn" href="{% url 'vouchers:schedule_create' %}">New schedule</a></div>
+</div>
+{% if schedules %}<div class="card table-wrap"><table class="data">
   <thead><tr><th>Schedule</th><th>Next payment</th><th>Frequency</th><th>Payee</th><th>Amount</th><th>Approver</th><th>Status</th><th></th></tr></thead>
-  <tbody>{% for s in schedules %}<tr><td>{{ s.title }}<div class="small muted">{{ s.branch.name }}</div></td><td>{{ s.next_run|date:"j M Y" }}</td>
-    <td>{{ s.get_frequency_display }}</td><td>{{ s.payee }}</td><td>Rs. {{ s.amount|floatformat:2 }}</td><td>{{ s.approver.name|default:"Self approval" }}</td>
-    <td>{% if s.is_active %}Active{% else %}Paused{% endif %}</td><td><a href="{% url 'vouchers:schedule_update' s.pk %}">Edit</a></td></tr>
-  {% empty %}<tr><td colspan="8" class="muted">No recurring schedules yet.</td></tr>{% endfor %}</tbody>
-</table></div></div>
+  <tbody>{% for s in schedules %}
+    <tr>
+      <td><strong>{{ s.title }}</strong><div class="small muted">{{ s.branch.name }}</div></td>
+      <td class="nowrap muted">{{ s.next_run|fdate }}</td>
+      <td>{{ s.get_frequency_display }}</td>
+      <td>{{ s.payee }}</td>
+      <td class="nowrap"><strong>{{ s.amount|money }}</strong></td>
+      <td>{{ s.approver.name|default:"Self approval" }}</td>
+      <td>{% if s.is_active %}{% badge "Active" "green" %}{% else %}{% badge "Paused" "gray" %}{% endif %}</td>
+      <td class="right"><a class="btn btn-secondary btn-sm" href="{% url 'vouchers:schedule_update' s.pk %}">Edit</a></td>
+    </tr>
+  {% endfor %}</tbody>
+</table></div>{% else %}<div class="card empty"><h3>No recurring schedules yet</h3><p>Create a schedule to generate payment vouchers automatically on their due dates.</p><p><a class="btn" href="{% url 'vouchers:schedule_create' %}">New schedule</a></p></div>{% endif %}
 {% endblock %}

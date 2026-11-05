@@ -1,15 +1,16 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Voucher expense categories{% endblock %}
 {% block content %}
 <div class="page-header"><div><h1>Expense categories</h1><p>Manage payment voucher categories and monthly budget limits</p></div>
   <a class="btn" href="{% url 'vouchers:category_create' %}">Add category</a></div>
-<div class="card"><div class="table-responsive"><table class="table">
+{% if categories %}<div class="card table-wrap"><table class="data">
   <thead><tr><th>Category</th><th>Description</th><th>Monthly budget</th><th>Status</th><th></th></tr></thead>
   <tbody>{% for category in categories %}<tr>
-    <td>{{ category.name }}</td><td>{{ category.description|default:"—" }}</td>
-    <td>{% if category.monthly_budget_limit %}Rs. {{ category.monthly_budget_limit|floatformat:2 }}{% else %}No limit{% endif %}</td>
-    <td>{% if category.is_active %}Active{% else %}Inactive{% endif %}</td>
-    <td><a href="{% url 'vouchers:category_update' category.pk %}">Edit</a></td>
-  </tr>{% empty %}<tr><td colspan="5" class="muted">No expense categories found.</td></tr>{% endfor %}</tbody>
-</table></div></div>
+    <td><strong>{{ category.name }}</strong></td><td class="muted">{{ category.description|default:"—" }}</td>
+    <td class="nowrap">{% if category.monthly_budget_limit %}<strong>{{ category.monthly_budget_limit|money }}</strong>{% else %}<span class="muted">No limit</span>{% endif %}</td>
+    <td>{% if category.is_active %}{% badge "Active" "green" %}{% else %}{% badge "Inactive" "gray" %}{% endif %}</td>
+    <td class="right"><a class="btn btn-secondary btn-sm" href="{% url 'vouchers:category_update' category.pk %}">Edit</a></td>
+  </tr>{% endfor %}</tbody>
+</table></div>{% else %}<div class="card empty"><h3>No expense categories</h3><p>Create a category to organize payment vouchers and set monthly budget limits.</p><p><a class="btn" href="{% url 'vouchers:category_create' %}">Add category</a></p></div>{% endif %}
 {% endblock %}

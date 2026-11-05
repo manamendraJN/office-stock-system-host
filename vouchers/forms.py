@@ -1,5 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from accounts.models import Branch, User
 from core.models import Setting
@@ -87,6 +88,8 @@ class VoucherScheduleForm(forms.ModelForm):
     def __init__(self, *args, user, instance=None, **kwargs):
         super().__init__(*args, instance=instance, **kwargs)
         self.user = user
+        min_next_run = (timezone.localdate() + timezone.timedelta(days=1)).isoformat()
+        self.fields['next_run'].widget.attrs['min'] = min_next_run
         self.fields['category'].queryset = ExpenseCategory.objects.filter(is_active=True)
         if instance and instance.pk:
             self.fields['category'].queryset |= ExpenseCategory.objects.filter(pk=instance.category_id)
@@ -129,6 +132,9 @@ class VoucherScheduleForm(forms.ModelForm):
                             and has_any(self.user, ['vouchers.self_approve']))
         if not data.get('approver') and not can_self_approve:
             self.add_error('approver', 'Choose an authorized manager for this schedule.')
+        next_run = data.get('next_run')
+        if next_run and next_run <= timezone.localdate():
+            self.add_error('next_run', 'Choose a date after today for the next payment occurrence.')
         return data
 
 
