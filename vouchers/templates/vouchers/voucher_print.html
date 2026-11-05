@@ -5,8 +5,9 @@
   .voucher-print-actions { display:flex; justify-content:flex-end; gap:.5rem; margin-bottom:1rem; }
   .voucher-paper { width:148mm; min-height:210mm; margin:0 auto; padding:9mm 10mm 8mm; background:#fff; color:#111; font-family:Arial, Helvetica, sans-serif; }
   .voucher-header { display:grid; grid-template-columns:30mm 1fr; align-items:center; gap:4mm; padding-bottom:3mm; border-bottom:1px solid #2ba5bd; }
-  .voucher-logo { width:27mm; height:15mm; display:flex; flex-direction:column; justify-content:center; color:#0d708c; line-height:1; text-align:center; }
+  .voucher-logo { width:27mm; height:15mm; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#0d708c; line-height:1; text-align:center; }
   .voucher-logo-mark { display:block; width:20mm; height:6mm; margin:0 auto; }
+  .voucher-logo img.voucher-logo-mark { width:27mm; height:15mm; object-fit:contain; object-position:center; }
   .voucher-logo-name { font-size:2.8mm; font-weight:700; letter-spacing:-.1mm; }
   .voucher-logo-subtitle { margin-top:1mm; font-size:1.5mm; color:#222; letter-spacing:.05mm; }
   .voucher-title { text-align:center; color:#176b86; line-height:1.04; }
@@ -36,7 +37,7 @@
 <article class="voucher-paper">
   <header class="voucher-header">
     <div class="voucher-logo" aria-label="Heritage Crops Plantations and Exports">
-      <svg class="voucher-logo-mark" viewBox="0 0 80 46" role="img" aria-hidden="true"><path fill="#78bd3d" d="M38 40C23 31 22 17 33 4c9 10 11 22 5 31z"/><path fill="#50a936" d="M40 40C38 23 48 10 63 7c1 16-7 27-23 33z"/><path fill="#18a5bf" d="M41 39c3-14 12-22 25-23-1 13-9 22-25 23z"/><path fill="#99c93c" d="M39 42C29 32 16 31 6 36c9 9 21 10 33 6z"/></svg><div class="voucher-logo-name">HERITAGE CROPS</div><div class="voucher-logo-subtitle">PLANTATION AND EXPORTS PVT LTD</div>
+      {% if app_settings.company_logo %}<img class="voucher-logo-mark" src="{% url 'core:company_logo' %}" alt="{{ app_settings.company_name }}">{% else %}<svg class="voucher-logo-mark" viewBox="0 0 80 46" role="img" aria-hidden="true"><path fill="#78bd3d" d="M38 40C23 31 22 17 33 4c9 10 11 22 5 31z"/><path fill="#50a936" d="M40 40C38 23 48 10 63 7c1 16-7 27-23 33z"/><path fill="#18a5bf" d="M41 39c3-14 12-22 25-23-1 13-9 22-25 23z"/><path fill="#99c93c" d="M39 42C29 32 16 31 6 36c9 9 21 10 33 6z"/></svg><div class="voucher-logo-name">HERITAGE CROPS</div><div class="voucher-logo-subtitle">PLANTATION AND EXPORTS PVT LTD</div>{% endif %}
     </div>
     <div class="voucher-title"><div class="company">{{ app_settings.company_name }}</div><h1>PAYMENT VOUCHER</h1></div>
   </header>

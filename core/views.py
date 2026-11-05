@@ -1,4 +1,5 @@
 import json
+import mimetypes
 import secrets
 from datetime import datetime, time
 
@@ -7,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import connection
-from django.http import HttpResponse, JsonResponse
+from django.http import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -88,7 +89,21 @@ def dashboard(request):
 def settings_view(request):
     settings_obj = Setting.get()
     company_data = request.POST if request.POST.get('action') == 'company' else None
-    company_form = SettingsCompanyForm(company_data, initial={'company_name': settings_obj.company_name})
+    company_files = request.FILES if request.POST.get('action') == 'company' else None
+    company_form = SettingsCompanyForm(company_data, company_files, initial={
+        'company_name': settings_obj.company_name,
+        'system_display_name': settings_obj.system_display_name,
+        'show_company_name_login': settings_obj.show_company_name_login,
+        'show_company_name_system': settings_obj.show_company_name_system,
+        'login_logo_size': settings_obj.login_logo_size,
+        'login_logo_offset_x': settings_obj.login_logo_offset_x,
+        'login_logo_offset_y': settings_obj.login_logo_offset_y,
+        'login_logo_alignment': settings_obj.login_logo_alignment,
+        'system_logo_size': settings_obj.system_logo_size,
+        'system_logo_offset_x': settings_obj.system_logo_offset_x,
+        'system_logo_offset_y': settings_obj.system_logo_offset_y,
+        'system_logo_alignment': settings_obj.system_logo_alignment,
+    })
     if request.method == 'POST':
         action = request.POST.get('action')
         try:
@@ -110,8 +125,21 @@ def settings_view(request):
                 account_services.update_settings(request, payment_voucher_self_approval_enabled=not on)
                 messages.success(request, 'Voucher self-approval disabled' if on else 'Voucher self-approval enabled')
             elif action == 'company' and company_form.is_valid():
-                account_services.update_settings(request, company_name=company_form.cleaned_data['company_name'])
-                messages.success(request, 'Company name saved')
+                account_services.update_settings(
+                    request, company_name=company_form.cleaned_data['company_name'],
+                    system_display_name=company_form.cleaned_data['system_display_name'],
+                    company_logo=company_form.cleaned_data.get('company_logo'),
+                    show_company_name_login=company_form.cleaned_data['show_company_name_login'],
+                    show_company_name_system=company_form.cleaned_data['show_company_name_system'],
+                    login_logo_size=company_form.cleaned_data['login_logo_size'],
+                    login_logo_offset_x=company_form.cleaned_data['login_logo_offset_x'],
+                    login_logo_offset_y=company_form.cleaned_data['login_logo_offset_y'],
+                    login_logo_alignment=company_form.cleaned_data['login_logo_alignment'],
+                    system_logo_size=company_form.cleaned_data['system_logo_size'],
+                    system_logo_offset_x=company_form.cleaned_data['system_logo_offset_x'],
+                    system_logo_offset_y=company_form.cleaned_data['system_logo_offset_y'],
+                    system_logo_alignment=company_form.cleaned_data['system_logo_alignment'])
+                messages.success(request, 'Company details saved')
             else:
                 if action != 'company':
                     messages.error(request, 'Unknown action')
@@ -121,6 +149,15 @@ def settings_view(request):
             messages.error(request, exc.message)
         return redirect('core:settings')
     return render(request, 'core/settings.html', {'s': settings_obj, 'company_form': company_form})
+
+
+@require_GET
+def company_logo(request):
+    logo = Setting.get().company_logo
+    if not logo:
+        return HttpResponse(status=404)
+    content_type = mimetypes.guess_type(logo.name)[0] or 'application/octet-stream'
+    return FileResponse(logo.open('rb'), content_type=content_type)
 
 
 # ------------------------------------------------------------------ audit log

@@ -1,13 +1,14 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Voucher approvals{% endblock %}
 {% block content %}
 <div class="page-header"><div><h1>Voucher approvals</h1><p>Payment vouchers assigned to you for review</p></div></div>
-<div class="card"><div class="table-responsive"><table class="table">
+{% if vouchers %}<div class="card voucher-table-card table-wrap"><table class="data">
   <thead><tr><th>Voucher</th><th>Payment date</th><th>Creator</th><th>Payee</th><th>Purpose</th><th>Amount</th></tr></thead>
   <tbody>{% for v in vouchers %}
-    <tr><td><a href="{% url 'vouchers:voucher_detail' v.pk %}">{{ v.number }}</a></td><td>{{ v.date|date:"j M Y" }}</td>
-      <td>{{ v.prepared_by.name }}</td><td>{{ v.payee }}</td><td>{{ v.being }}</td><td>Rs. {{ v.amount|floatformat:2 }}</td></tr>
-    {% empty %}<tr><td colspan="6" class="muted">No vouchers are waiting for your approval.</td></tr>{% endfor %}
+    <tr><td class="nowrap mono small"><a href="{% url 'vouchers:voucher_detail' v.pk %}"><b>{{ v.number }}</b></a></td><td class="nowrap muted">{{ v.date|fdate }}</td>
+      <td><b>{{ v.prepared_by.name }}</b></td><td>{{ v.payee }}</td><td>{{ v.being }}</td><td class="nowrap"><b>{{ v.amount|money }}</b></td></tr>
+    {% endfor %}
   </tbody>
-</table></div></div>
+</table></div>{% else %}<div class="card empty"><h3>No pending approvals</h3><p>No payment vouchers are waiting for your review.</p></div>{% endif %}
 {% endblock %}

@@ -5,12 +5,11 @@ from core.permissions import ALL_PERMISSIONS, side_of, visible_nav
 
 
 def app(request):
-    ctx = {}
+    settings = Setting.get()
+    ctx = {'app_settings': settings}
     user = getattr(request, 'user', None)
     if user is None or not user.is_authenticated:
         return ctx
-    settings = Setting.get()
-    ctx['app_settings'] = settings
     perms = getattr(request, 'perms', [])
     nav = []
     path = request.path

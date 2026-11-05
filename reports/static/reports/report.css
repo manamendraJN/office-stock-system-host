@@ -39,6 +39,8 @@ body { margin: 0; }
   padding-bottom: var(--space-5);
   margin-bottom: var(--space-5);
 }
+.report-brand { display: flex; align-items: center; gap: 12px; }
+.report-brand img { width: 42px; height: 42px; object-fit: contain; object-position: center; }
 .company-name { font-size: 18pt; font-weight: 700; letter-spacing: .01em; }
 h1 { font-size: 15pt; margin: var(--space-2) 0 var(--space-1); }
 .subtitle { color: var(--muted); margin: 0 var(--space-2) var(--space-4) 0; }

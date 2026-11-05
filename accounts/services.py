@@ -284,6 +284,10 @@ def _branch_has_documents(branch):
 
 # ---------------------------------------------------------------- settings
 def update_settings(request, *, branch_module_enabled=None, audit_logging_enabled=None, company_name=None,
+                    system_display_name=None, company_logo=None, show_company_name_login=None, show_company_name_system=None,
+                    login_logo_size=None, login_logo_offset_x=None, login_logo_offset_y=None,
+                    login_logo_alignment=None, system_logo_size=None, system_logo_offset_x=None,
+                    system_logo_offset_y=None, system_logo_alignment=None,
                     payment_voucher_module_enabled=None, payment_voucher_self_approval_enabled=None):
     from branchops.models import Dispatch, Request
     settings = Setting.get()
@@ -296,8 +300,15 @@ def update_settings(request, *, branch_module_enabled=None, audit_logging_enable
                                                         open_requests=open_requests, open_dispatches=open_dispatches)
         if problem:
             raise Conflict(problem)
+    old_logo_name = settings.company_logo.name
     old = {'branch_module_enabled': settings.branch_module_enabled, 'audit_logging_enabled': settings.audit_logging_enabled,
-           'company_name': settings.company_name,
+           'company_name': settings.company_name, 'system_display_name': settings.system_display_name,
+           'company_logo': old_logo_name,
+           'show_company_name_login': settings.show_company_name_login, 'show_company_name_system': settings.show_company_name_system,
+           'login_logo_size': settings.login_logo_size, 'login_logo_offset_x': settings.login_logo_offset_x,
+           'login_logo_offset_y': settings.login_logo_offset_y, 'login_logo_alignment': settings.login_logo_alignment,
+           'system_logo_size': settings.system_logo_size, 'system_logo_offset_x': settings.system_logo_offset_x,
+           'system_logo_offset_y': settings.system_logo_offset_y, 'system_logo_alignment': settings.system_logo_alignment,
            'payment_voucher_module_enabled': settings.payment_voucher_module_enabled,
            'payment_voucher_self_approval_enabled': settings.payment_voucher_self_approval_enabled}
     new = {}
@@ -310,6 +321,27 @@ def update_settings(request, *, branch_module_enabled=None, audit_logging_enable
     if company_name is not None:
         settings.company_name = company_name
         new['company_name'] = company_name
+    if system_display_name is not None:
+        settings.system_display_name = system_display_name
+        new['system_display_name'] = system_display_name
+    if company_logo is not None:
+        settings.company_logo = company_logo
+        new['company_logo'] = company_logo.name
+    for name, value in {
+        'show_company_name_login': show_company_name_login,
+        'show_company_name_system': show_company_name_system,
+        'login_logo_size': login_logo_size,
+        'login_logo_offset_x': login_logo_offset_x,
+        'login_logo_offset_y': login_logo_offset_y,
+        'login_logo_alignment': login_logo_alignment,
+        'system_logo_size': system_logo_size,
+        'system_logo_offset_x': system_logo_offset_x,
+        'system_logo_offset_y': system_logo_offset_y,
+        'system_logo_alignment': system_logo_alignment,
+    }.items():
+        if value is not None:
+            setattr(settings, name, value)
+            new[name] = value
     if payment_voucher_module_enabled is not None:
         settings.payment_voucher_module_enabled = payment_voucher_module_enabled
         new['payment_voucher_module_enabled'] = payment_voucher_module_enabled
@@ -317,6 +349,8 @@ def update_settings(request, *, branch_module_enabled=None, audit_logging_enable
         settings.payment_voucher_self_approval_enabled = payment_voucher_self_approval_enabled
         new['payment_voucher_self_approval_enabled'] = payment_voucher_self_approval_enabled
     settings.save()
+    if company_logo is not None and old_logo_name and old_logo_name != settings.company_logo.name:
+        settings.company_logo.storage.delete(old_logo_name)
     # Turning logging off is itself always recorded, so there is a trace of who stopped it.
     log_audit(request, 'settings.update', 'Setting', settings.pk, old_value=old, new_value=new,
               force=old['audit_logging_enabled'] is not False and audit_logging_enabled is False)

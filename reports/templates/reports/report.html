@@ -11,7 +11,7 @@
 <body>
 <main class="report-document{% if rtype == 'balances' %} stock-report{% endif %}">
   <header class="report-header">
-    <div class="company-name">{{ app_settings.company_name }}</div>
+    <div class="report-brand">{% if app_settings.company_logo %}<img src="{% url 'core:company_logo' %}" alt="{{ app_settings.company_name }}">{% endif %}<div class="company-name">{{ app_settings.company_name }}</div></div>
     <h1>{{ meta.title }} Report</h1>
     <p class="subtitle">{{ meta.description }}</p>
     <dl class="report-details">
