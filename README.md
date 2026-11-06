@@ -31,7 +31,7 @@ Built with Python, Django, WhiteNoise, Docker, and Caddy with automatic SSL (Let
 - **Audit Logging**: Append-only audit trail capturing user actions, IP addresses, and timestamps.
 - **Reports**: Stock balance, purchase summaries, usage statistics, and dispatch reports with CSV export and print view.
 
-Enable the module in **Settings**, then assign `vouchers.create`, `vouchers.approve`, `vouchers.view`, and `vouchers.print` through the existing User or Role permission picker. Self-approval requires both the global Settings switch and `vouchers.self_approve` on the creator's account or role. `vouchers.schedule` manages recurring schedules and `vouchers.configure` manages expense categories and budgets. Branch-side users remain scoped to their assigned branch.
+Enable the module in **Settings**, then assign `vouchers.create`, `vouchers.recommend`, `vouchers.approve`, `vouchers.view`, and `vouchers.print` through the existing User or Role permission picker. A voucher assigned to a recommender moves to the approver only after recommendation; rejection at either stage requires a reason and returns the voucher to its preparer. Self-approval requires both the global Settings switch and `vouchers.self_approve` on the creator's account or role, and cannot bypass an assigned recommender. `vouchers.schedule` manages recurring schedules and `vouchers.configure` manages expense categories and budgets. Branch-side users remain scoped to their assigned branch.
 
 ---
 

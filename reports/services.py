@@ -149,7 +149,7 @@ def payment_vouchers_report(rng, *, branch_id=None, status='', category_id=None,
         })
         if v.status == Voucher.Status.APPROVED:
             approved_amount += v.amount
-        elif v.status == Voucher.Status.PENDING:
+        elif v.status in (Voucher.Status.RECOMMENDING, Voucher.Status.PENDING):
             pending_amount += v.amount
     return {
         'columns': [

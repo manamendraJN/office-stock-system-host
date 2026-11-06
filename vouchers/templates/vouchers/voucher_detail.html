@@ -3,7 +3,7 @@
 {% block title %}{{ voucher.number }}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <div><h1>{{ voucher.number }}</h1><p>{% if voucher.status == 'approved' %}{% badge voucher.get_status_display 'green' %}{% elif voucher.status == 'rejected' %}{% badge voucher.get_status_display 'red' %}{% elif voucher.status == 'pending' %}{% badge voucher.get_status_display 'amber' %}{% else %}{% badge voucher.get_status_display 'gray' %}{% endif %} · Payment date {{ voucher.date|fdate }}</p></div>
+  <div><h1>{{ voucher.number }}</h1><p>{% if voucher.status == 'approved' %}{% badge voucher.get_status_display 'green' %}{% elif voucher.status == 'rejected' %}{% badge voucher.get_status_display 'red' %}{% elif voucher.status == 'pending' or voucher.status == 'recommending' %}{% badge voucher.get_status_display 'amber' %}{% else %}{% badge voucher.get_status_display 'gray' %}{% endif %} · Payment date {{ voucher.date|fdate }}</p></div>
   <div class="form-actions">
     {% if can_edit %}<a class="btn btn-secondary" href="{% url 'vouchers:voucher_update' voucher.pk %}">Edit</a>{% endif %}
     {% if can_print %}<a class="btn" href="{% url 'vouchers:voucher_print' voucher.pk %}">Print voucher</a>{% endif %}
@@ -17,6 +17,8 @@
     <div><dt>Payment method</dt><dd>{{ voucher.get_method_of_payment_display }}{% if voucher.cash %} · Cash payment{% endif %}</dd></div><div><dt>Account details</dt><dd>{{ voucher.account_details|default:"—" }}</dd></div>
     <div><dt>Cheque number</dt><dd>{{ voucher.cheque_number|default:"—" }}</dd></div><div><dt>Branch</dt><dd>{{ voucher.branch.name }}</dd></div>
     <div><dt>Purpose</dt><dd>{{ voucher.being }}</dd></div><div><dt>Created by</dt><dd>{{ voucher.prepared_by.name }}</dd></div>
+    <div><dt>Recommender</dt><dd>{% if voucher.recommender %}{{ voucher.recommender.name }}{% else %}—{% endif %}</dd></div>
+    <div><dt>Recommended by</dt><dd>{% if voucher.recommended_by %}{{ voucher.recommended_by.name }} · {{ voucher.recommended_at|date:"j M Y, H:i" }}{% else %}—{% endif %}</dd></div>
     <div><dt>Approver</dt><dd>{% if voucher.approved_by %}{{ voucher.approved_by.name }}{% elif voucher.approver %}{{ voucher.approver.name }}{% else %}—{% endif %}</dd></div>
     <div><dt>Approval date</dt><dd>{{ voucher.approved_at|date:"j M Y, H:i"|default:"—" }}</dd></div>
   </dl>
@@ -27,15 +29,16 @@
   {% if can_self_approve %}<form method="post" action="{% url 'vouchers:voucher_action' voucher.pk 'self_approve' %}">{% csrf_token %}<button class="btn btn-secondary" type="submit">Approve and print</button></form>{% endif %}
 </div></div>
 {% endif %}
-{% if can_approve %}
+{% if can_recommend or can_approve %}
 <div class="card voucher-review-card"><div class="card-head"><h2>Review voucher</h2></div><div class="card-body stack">
   <div class="form-actions" style="justify-content:flex-start;margin-top:0">
-    <form method="post" action="{% url 'vouchers:voucher_action' voucher.pk 'approve' %}">{% csrf_token %}<button class="btn" type="submit">Approve voucher</button></form>
+    {% if can_recommend %}<form method="post" action="{% url 'vouchers:voucher_action' voucher.pk 'recommend' %}">{% csrf_token %}<button class="btn" type="submit">Recommend for approval</button></form>{% endif %}
+    {% if can_approve %}<form method="post" action="{% url 'vouchers:voucher_action' voucher.pk 'approve' %}">{% csrf_token %}<button class="btn" type="submit">Approve voucher</button></form>{% endif %}
   </div>
   <form method="post" action="{% url 'vouchers:voucher_action' voucher.pk 'reject' %}" class="stack">
     {% csrf_token %}<label class="lbl" for="{{ reject_form.reason.id_for_label }}">{{ reject_form.reason.label }}</label>
     {{ reject_form.reason }}{% for error in reject_form.reason.errors %}<div class="err">{{ error }}</div>{% endfor %}
-    <div><button class="btn btn-secondary" type="submit">Reject voucher</button></div>
+    <div><button class="btn btn-secondary" type="submit">{% if can_recommend %}Reject with reason{% else %}Reject voucher{% endif %}</button></div>
   </form>
 </div></div>
 {% endif %}

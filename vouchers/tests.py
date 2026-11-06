@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.test import TestCase
@@ -17,6 +18,11 @@ class VoucherWorkflowTests(TestCase):
         self.manager = User.objects.create_user(
             'manager@example.test', 'Strong-Passw0rd!', name='Accounts Manager',
             role='manager', branch=self.branch, permissions=['vouchers.view', 'vouchers.approve', 'vouchers.print'],
+        )
+        self.recommender = User.objects.create_user(
+            'recommender@example.test', 'Strong-Passw0rd!', name='Voucher Recommender',
+            role='recommender', branch=self.branch,
+            permissions=['vouchers.view', 'vouchers.recommend'],
         )
         self.creator = User.objects.create_user(
             'assistant@example.test', 'Strong-Passw0rd!', name='Accounts Assistant',
@@ -85,6 +91,93 @@ class VoucherWorkflowTests(TestCase):
         self.client.force_login(self.creator)
         self.assertEqual(self.client.get(reverse('vouchers:voucher_print', args=[voucher.pk])).status_code, 403)
 
+    def test_recommendation_precedes_approval_and_records_each_action(self):
+        self.client.force_login(self.creator)
+        response = self.client.post(reverse('vouchers:voucher_create'), self.voucher_data(
+            action='submit', recommender=str(self.recommender.pk),
+        ))
+        self.assertEqual(response.status_code, 302)
+        voucher = Voucher.objects.get(prepared_by=self.creator)
+        self.assertEqual(voucher.status, Voucher.Status.RECOMMENDING)
+        self.assertEqual(voucher.recommender, self.recommender)
+        self.assertEqual(self.client.get(reverse('vouchers:voucher_print', args=[voucher.pk])).status_code, 403)
+
+        self.client.force_login(self.recommender)
+        self.assertContains(self.client.get(reverse('vouchers:recommendation_queue')), voucher.number)
+        self.client.post(reverse('vouchers:voucher_action', args=[voucher.pk, 'recommend']))
+        voucher.refresh_from_db()
+        self.assertEqual(voucher.status, Voucher.Status.PENDING)
+        self.assertEqual(voucher.recommended_by, self.recommender)
+        self.assertIsNotNone(voucher.recommended_at)
+        self.assertTrue(voucher.events.filter(action='recommended', actor=self.recommender).exists())
+        self.assertEqual(self.client.get(reverse('vouchers:approval_queue')).status_code, 403)
+
+        self.client.force_login(self.manager)
+        self.assertContains(self.client.get(reverse('vouchers:approval_queue')), voucher.number)
+        self.client.post(reverse('vouchers:voucher_action', args=[voucher.pk, 'approve']))
+        voucher.refresh_from_db()
+        self.assertEqual(voucher.status, Voucher.Status.APPROVED)
+        self.assertEqual(voucher.events.count(), 4)
+        self.client.force_login(self.creator)
+        self.assertEqual(self.client.get(reverse('vouchers:voucher_print', args=[voucher.pk])).status_code, 200)
+
+    def test_recommendation_rejection_returns_to_creator_for_resubmission(self):
+        self.client.force_login(self.creator)
+        self.client.post(reverse('vouchers:voucher_create'), self.voucher_data(
+            action='submit', recommender=str(self.recommender.pk),
+        ))
+        voucher = Voucher.objects.get(prepared_by=self.creator)
+        self.client.force_login(self.recommender)
+        self.client.post(
+            reverse('vouchers:voucher_action', args=[voucher.pk, 'reject']),
+            {'reason': 'Please attach supporting documentation'},
+        )
+        voucher.refresh_from_db()
+        self.assertEqual(voucher.status, Voucher.Status.REJECTED)
+        self.assertEqual(voucher.rejection_reason, 'Please attach supporting documentation')
+        self.assertTrue(voucher.events.filter(action='recommendation_rejected').exists())
+
+        self.client.force_login(self.creator)
+        response = self.client.post(
+            reverse('vouchers:voucher_update', args=[voucher.pk]),
+            self.voucher_data(action='submit', recommender=str(self.recommender.pk)),
+        )
+        self.assertEqual(response.status_code, 302)
+        voucher.refresh_from_db()
+        self.assertEqual(voucher.status, Voucher.Status.RECOMMENDING)
+        self.assertIsNone(voucher.rejection_reason or None)
+        self.assertEqual(voucher.events.filter(action='submitted').count(), 2)
+
+    def test_recommender_and_approver_must_be_different(self):
+        dual_role = User.objects.create_user(
+            'dual@example.test', 'Strong-Passw0rd!', name='Dual Reviewer',
+            role='reviewer', branch=self.branch,
+            permissions=['vouchers.view', 'vouchers.recommend', 'vouchers.approve'],
+        )
+        self.client.force_login(self.creator)
+        response = self.client.post(reverse('vouchers:voucher_create'), self.voucher_data(
+            action='submit', recommender=str(dual_role.pk), approver=str(dual_role.pk),
+        ))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'must be different users')
+        self.assertFalse(Voucher.objects.exists())
+
+    def test_self_approval_cannot_bypass_an_assigned_recommender(self):
+        self.creator.permissions = [
+            'vouchers.view', 'vouchers.create', 'vouchers.print', 'vouchers.self_approve',
+        ]
+        self.creator.save(update_fields=['permissions'])
+        settings = Setting.get()
+        settings.payment_voucher_self_approval_enabled = True
+        settings.save()
+        self.client.force_login(self.creator)
+        response = self.client.post(reverse('vouchers:voucher_create'), self.voucher_data(
+            action='self_approve', recommender=str(self.recommender.pk),
+        ))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'must be submitted for recommendation')
+        self.assertFalse(Voucher.objects.exists())
+
     def test_self_approval_requires_global_setting_and_user_permission(self):
         self.creator.permissions = ['vouchers.view', 'vouchers.create', 'vouchers.print', 'vouchers.self_approve']
         self.creator.save(update_fields=['permissions'])
@@ -106,12 +199,13 @@ class VoucherWorkflowTests(TestCase):
     def test_scheduled_voucher_is_generated_once_and_uses_manager_queue(self):
         self.client.force_login(self.creator)
         today = timezone.localdate()
+        due_date = today + timedelta(days=1)
         data = {
             'title': 'Monthly stationery',
             'category': str(self.category.pk),
             'amount': '75.00',
             'frequency': 'monthly',
-            'next_run': today.isoformat(),
+            'next_run': due_date.isoformat(),
             'method_of_payment': Voucher.PaymentMethod.BANK_TRANSFER,
             'to': 'Office supplier',
             'account_details': 'Operating account',
@@ -123,16 +217,46 @@ class VoucherWorkflowTests(TestCase):
         }
         response = self.client.post(reverse('vouchers:schedule_create'), data)
         self.assertEqual(response.status_code, 302)
-        generated, errors = generate_due_schedules(today=today)
+        generated, errors = generate_due_schedules(today=due_date)
         self.assertEqual((generated, errors), (1, []))
         voucher = Voucher.objects.get(schedule__title='Monthly stationery')
         self.assertEqual(voucher.status, Voucher.Status.PENDING)
-        self.assertEqual(voucher.date, today)
-        generated, errors = generate_due_schedules(today=today)
+        self.assertEqual(voucher.date, due_date)
+        generated, errors = generate_due_schedules(today=due_date)
         self.assertEqual((generated, errors), (0, []))
 
         self.client.force_login(self.manager)
         self.assertContains(self.client.get(reverse('vouchers:approval_queue')), voucher.number)
+
+    def test_scheduled_voucher_with_recommender_enters_recommendation_queue(self):
+        today = timezone.localdate()
+        due_date = today + timedelta(days=1)
+        data = {
+            'title': 'Recommended monthly stationery',
+            'category': str(self.category.pk),
+            'amount': '75.00',
+            'frequency': 'monthly',
+            'next_run': due_date.isoformat(),
+            'method_of_payment': Voucher.PaymentMethod.BANK_TRANSFER,
+            'to': 'Office supplier',
+            'account_details': 'Operating account',
+            'being': 'Monthly stationery',
+            'payee': 'Office supplier',
+            'branch': str(self.branch.pk),
+            'recommender': str(self.recommender.pk),
+            'approver': str(self.manager.pk),
+            'is_active': 'on',
+        }
+        self.client.force_login(self.creator)
+        response = self.client.post(reverse('vouchers:schedule_create'), data)
+        self.assertEqual(response.status_code, 302)
+        generated, errors = generate_due_schedules(today=due_date)
+        self.assertEqual((generated, errors), (1, []))
+        voucher = Voucher.objects.get(schedule__title='Recommended monthly stationery')
+        self.assertEqual(voucher.status, Voucher.Status.RECOMMENDING)
+        self.assertEqual(voucher.recommender, self.recommender)
+        self.client.force_login(self.recommender)
+        self.assertContains(self.client.get(reverse('vouchers:recommendation_queue')), voucher.number)
 
     def test_scheduled_voucher_can_self_approve_only_when_globally_enabled(self):
         creator = User.objects.create_user(
@@ -141,12 +265,13 @@ class VoucherWorkflowTests(TestCase):
             permissions=['vouchers.view', 'vouchers.create', 'vouchers.schedule', 'vouchers.self_approve'],
         )
         today = timezone.localdate()
+        due_date = today + timedelta(days=1)
         data = {
             'title': 'Self-approved monthly service',
             'category': str(self.category.pk),
             'amount': '50.00',
             'frequency': 'monthly',
-            'next_run': today.isoformat(),
+            'next_run': due_date.isoformat(),
             'method_of_payment': Voucher.PaymentMethod.CASH,
             'cash': 'on',
             'to': 'Service provider',
@@ -166,7 +291,7 @@ class VoucherWorkflowTests(TestCase):
         settings.save()
         response = self.client.post(reverse('vouchers:schedule_create'), data)
         self.assertEqual(response.status_code, 302)
-        generated, errors = generate_due_schedules(today=today)
+        generated, errors = generate_due_schedules(today=due_date)
         self.assertEqual((generated, errors), (1, []))
         voucher = Voucher.objects.get(schedule__title='Self-approved monthly service')
         self.assertEqual(voucher.status, Voucher.Status.APPROVED)

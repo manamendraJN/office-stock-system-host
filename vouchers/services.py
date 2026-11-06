@@ -11,7 +11,7 @@ from core.models import Setting
 from core.permissions import can_access_branch, has_any, is_branch_side
 from core.services.audit import log_audit
 from core.services.sequence import next_number
-from vouchers.forms import eligible_approvers
+from vouchers.forms import eligible_approvers, eligible_recommenders
 from vouchers.models import ExpenseCategory, Voucher, VoucherEvent, VoucherSchedule
 
 
@@ -24,7 +24,9 @@ def get_voucher(user, pk, *, for_update=False):
     _ensure_module()
     if not has_any(user, ['vouchers.view']):
         raise Forbidden('You do not have permission to view payment vouchers')
-    qs = Voucher.objects.select_related('branch', 'prepared_by', 'approver', 'approved_by', 'category')
+    qs = Voucher.objects.select_related(
+        'branch', 'prepared_by', 'recommender', 'recommended_by', 'approver', 'approved_by', 'category',
+    )
     if for_update:
         qs = qs.select_for_update(of=('self',))
     voucher = qs.filter(pk=pk).first()
@@ -74,6 +76,7 @@ def _voucher_snapshot(voucher):
         'payee': voucher.payee,
         'category_id': voucher.category_id,
         'branch_id': voucher.branch_id,
+        'recommender_id': voucher.recommender_id,
         'approver_id': voucher.approver_id,
     }
 
@@ -92,6 +95,7 @@ def _schedule_snapshot(schedule):
         'purpose': schedule.being,
         'payee': schedule.payee,
         'branch_id': schedule.branch_id,
+        'recommender_id': schedule.recommender_id,
         'approver_id': schedule.approver_id,
         'is_active': schedule.is_active,
     }
@@ -100,6 +104,11 @@ def _schedule_snapshot(schedule):
 def _valid_approver(user):
     return bool(user and user.active and not is_branch_side(user)
                 and any(candidate.pk == user.pk for candidate in eligible_approvers(None)))
+
+
+def _valid_recommender(user):
+    return bool(user and user.active and not is_branch_side(user)
+                and any(candidate.pk == user.pk for candidate in eligible_recommenders(None)))
 
 
 def _check_budget(voucher):
@@ -155,8 +164,11 @@ def update_voucher(request, voucher_id, form):
         updated.number = voucher.number
         updated.prepared_by = voucher.prepared_by
         updated.status = Voucher.Status.DRAFT
+        updated.recommender = form.cleaned_data.get('recommender')
         updated.approver = form.cleaned_data.get('approver')
         updated.approval_requested_at = None
+        updated.recommended_by = None
+        updated.recommended_at = None
         updated.approved_at = None
         updated.approved_by = None
         updated.rejected_at = None
@@ -177,16 +189,24 @@ def submit_voucher(request, voucher_id):
         voucher = get_voucher(request.user, voucher_id, for_update=True)
         if voucher.prepared_by_id != request.user.pk or voucher.status != Voucher.Status.DRAFT:
             raise Conflict('Only the creator can submit a draft voucher.')
-        if voucher.approver_id == request.user.pk:
-            raise BadRequest('A voucher cannot be submitted to its creator for approval.')
+        if voucher.approver_id == request.user.pk or voucher.recommender_id == request.user.pk:
+            raise BadRequest('A voucher cannot be assigned to its creator for review.')
         if not voucher.approver_id or not _valid_approver(voucher.approver):
             raise BadRequest('Choose an active manager with voucher approval permission.')
+        if voucher.recommender_id and not _valid_recommender(voucher.recommender):
+            raise BadRequest('Choose an active user with voucher recommendation permission.')
+        if voucher.recommender_id and voucher.recommender_id == voucher.approver_id:
+            raise BadRequest('The recommender and approver must be different users.')
         previous = voucher.status
-        voucher.status = Voucher.Status.PENDING
+        voucher.status = (Voucher.Status.RECOMMENDING if voucher.recommender_id
+                          else Voucher.Status.PENDING)
         voucher.approval_requested_at = timezone.now()
         voucher.save(update_fields=['status', 'approval_requested_at', 'updated_at'])
-        _event(voucher, request.user, 'submitted', previous)
-    _audit(request, 'submit', voucher, new={'status': voucher.status, 'approver': voucher.approver_id})
+        _event(voucher, request.user, 'submitted', previous,
+               'Submitted for recommendation' if voucher.recommender_id else '')
+    _audit(request, 'submit', voucher, new={
+        'status': voucher.status, 'recommender': voucher.recommender_id, 'approver': voucher.approver_id,
+    })
     return voucher
 
 
@@ -200,6 +220,8 @@ def self_approve_voucher(request, voucher_id):
         voucher = get_voucher(request.user, voucher_id, for_update=True)
         if voucher.prepared_by_id != request.user.pk or voucher.status != Voucher.Status.DRAFT:
             raise Conflict('Only the creator can self-approve their own draft voucher.')
+        if voucher.recommender_id:
+            raise Conflict('This voucher must be recommended before it can be approved.')
         _check_budget(voucher)
         previous = voucher.status
         voucher.status = Voucher.Status.APPROVED
@@ -212,13 +234,61 @@ def self_approve_voucher(request, voucher_id):
     return voucher
 
 
+def recommend_voucher(request, voucher_id):
+    _ensure_module()
+    if not _valid_recommender(request.user):
+        raise Forbidden('Only an authorized main-office recommender can recommend payment vouchers')
+    with transaction.atomic():
+        voucher = get_voucher(request.user, voucher_id, for_update=True)
+        if voucher.status != Voucher.Status.RECOMMENDING or voucher.recommender_id != request.user.pk:
+            raise Conflict('This voucher is not assigned to you for recommendation.')
+        if voucher.prepared_by_id == request.user.pk or voucher.approver_id == request.user.pk:
+            raise Conflict('The recommender must be separate from the preparer and approver.')
+        if not _valid_approver(voucher.approver):
+            raise Conflict('The assigned approver is no longer authorized.')
+        previous = voucher.status
+        voucher.status = Voucher.Status.PENDING
+        voucher.recommended_by = request.user
+        voucher.recommended_at = timezone.now()
+        voucher.save(update_fields=['status', 'recommended_by', 'recommended_at', 'updated_at'])
+        _event(voucher, request.user, 'recommended', previous)
+    _audit(request, 'recommend', voucher, new={
+        'status': voucher.status, 'recommender': voucher.recommender_id, 'approver': voucher.approver_id,
+    })
+    return voucher
+
+
+def reject_recommendation_voucher(request, voucher_id, reason):
+    _ensure_module()
+    if not _valid_recommender(request.user):
+        raise Forbidden('Only an authorized main-office recommender can reject payment vouchers')
+    reason = (reason or '').strip()
+    if not reason:
+        raise BadRequest('Enter a reason before rejecting a voucher.')
+    with transaction.atomic():
+        voucher = get_voucher(request.user, voucher_id, for_update=True)
+        if voucher.status != Voucher.Status.RECOMMENDING or voucher.recommender_id != request.user.pk:
+            raise Conflict('This voucher is not assigned to you for recommendation.')
+        previous = voucher.status
+        voucher.status = Voucher.Status.REJECTED
+        voucher.rejected_at = timezone.now()
+        voucher.rejection_reason = reason[:500]
+        voucher.save(update_fields=['status', 'rejected_at', 'rejection_reason', 'updated_at'])
+        _event(voucher, request.user, 'recommendation_rejected', previous, voucher.rejection_reason)
+    _audit(request, 'recommendation_reject', voucher, new={
+        'status': voucher.status, 'reason': voucher.rejection_reason,
+    })
+    return voucher
+
+
 def approve_voucher(request, voucher_id):
     _ensure_module()
-    if not has_any(request.user, ['vouchers.approve']) or is_branch_side(request.user):
+    if not _valid_approver(request.user):
         raise Forbidden('Only an authorized main-office manager can approve payment vouchers')
     with transaction.atomic():
         voucher = get_voucher(request.user, voucher_id, for_update=True)
-        if voucher.status != Voucher.Status.PENDING or voucher.approver_id != request.user.pk:
+        if (voucher.status != Voucher.Status.PENDING or voucher.approver_id != request.user.pk
+                or voucher.recommender_id and voucher.recommended_by_id != voucher.recommender_id):
             raise Conflict('This voucher is not assigned to you for approval.')
         if voucher.prepared_by_id == request.user.pk:
             raise Conflict('The voucher creator cannot approve their own voucher through the manager workflow.')
@@ -235,14 +305,15 @@ def approve_voucher(request, voucher_id):
 
 def reject_voucher(request, voucher_id, reason):
     _ensure_module()
-    if not has_any(request.user, ['vouchers.approve']) or is_branch_side(request.user):
+    if not _valid_approver(request.user):
         raise Forbidden('Only an authorized main-office manager can reject payment vouchers')
     reason = (reason or '').strip()
     if not reason:
         raise BadRequest('Enter a reason before rejecting a voucher.')
     with transaction.atomic():
         voucher = get_voucher(request.user, voucher_id, for_update=True)
-        if voucher.status != Voucher.Status.PENDING or voucher.approver_id != request.user.pk:
+        if (voucher.status != Voucher.Status.PENDING or voucher.approver_id != request.user.pk
+                or voucher.recommender_id and voucher.recommended_by_id != voucher.recommender_id):
             raise Conflict('This voucher is not assigned to you for review.')
         previous = voucher.status
         voucher.status = Voucher.Status.REJECTED
@@ -299,13 +370,19 @@ def _generate_due_for_schedule(schedule, today):
     generated = 0
     while schedule.is_active and schedule.next_run <= today:
         due_date = schedule.next_run
-        if schedule.approver_id and schedule.approver_id != schedule.created_by_id \
-                and _valid_approver(schedule.approver):
-            status = Voucher.Status.PENDING
+        if (schedule.approver_id and schedule.approver_id != schedule.created_by_id
+                and _valid_approver(schedule.approver)
+                and (not schedule.recommender_id
+                     or (schedule.recommender_id != schedule.created_by_id
+                         and schedule.recommender_id != schedule.approver_id
+                         and _valid_recommender(schedule.recommender)))):
+            status = (Voucher.Status.RECOMMENDING if schedule.recommender_id
+                      else Voucher.Status.PENDING)
             approved_by = None
             approved_at = None
             submitted_at = timezone.now()
-        elif (not schedule.approver_id and Setting.get().payment_voucher_self_approval_enabled
+        elif (not schedule.approver_id and not schedule.recommender_id
+              and Setting.get().payment_voucher_self_approval_enabled
               and has_any(schedule.created_by, ['vouchers.self_approve'])):
             status = Voucher.Status.APPROVED
             approved_by = schedule.created_by
@@ -321,14 +398,18 @@ def _generate_due_for_schedule(schedule, today):
                 'account_details': schedule.account_details, 'cheque_number': schedule.cheque_number,
                 'being': schedule.being, 'payee': schedule.payee, 'category': schedule.category,
                 'branch': schedule.branch, 'prepared_by': schedule.created_by,
-                'approver': schedule.approver if status == Voucher.Status.PENDING else None,
+                'recommender': schedule.recommender if status == Voucher.Status.RECOMMENDING else None,
+                'approver': schedule.approver if status in (
+                    Voucher.Status.RECOMMENDING, Voucher.Status.PENDING,
+                ) else None,
                 'status': status, 'approval_requested_at': submitted_at,
                 'approved_by': approved_by, 'approved_at': approved_at,
             },
         )
         if created:
             _event(voucher, schedule.created_by,
-                   'submitted' if status == Voucher.Status.PENDING else 'self_approved',
+                   'submitted' if status in (Voucher.Status.RECOMMENDING, Voucher.Status.PENDING)
+                   else 'self_approved',
                    Voucher.Status.DRAFT, f'Generated from schedule: {schedule.title}')
             log_audit(None, 'payment_voucher.schedule_generate', 'PaymentVoucher', voucher.pk,
                       new_value={'number': voucher.number, 'scheduled_for': str(due_date)},
@@ -349,7 +430,8 @@ def generate_due_schedules(today=None):
         try:
             with transaction.atomic():
                 schedule = (VoucherSchedule.objects.select_for_update()
-                            .select_related('category', 'created_by', 'approver', 'branch').get(pk=schedule_id))
+                            .select_related('category', 'created_by', 'recommender', 'approver', 'branch')
+                            .get(pk=schedule_id))
                 generated += _generate_due_for_schedule(schedule, today)
         except BadRequest as exc:
             errors.append(str(exc))

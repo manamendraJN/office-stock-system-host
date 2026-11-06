@@ -47,6 +47,8 @@ class VoucherSchedule(models.Model):
     cheque_number = models.CharField(max_length=50, blank=True, default='')
     being = models.CharField(max_length=250)
     payee = models.CharField(max_length=150)
+    recommender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='+',
+                                    null=True, blank=True)
     approver = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='+',
                                  null=True, blank=True)
     branch = models.ForeignKey('accounts.Branch', on_delete=models.PROTECT, related_name='voucher_schedules')
@@ -71,6 +73,7 @@ class Voucher(models.Model):
 
     class Status(models.TextChoices):
         DRAFT = 'draft', 'Draft'
+        RECOMMENDING = 'recommending', 'Awaiting recommendation'
         PENDING = 'pending', 'Awaiting approval'
         APPROVED = 'approved', 'Approved'
         REJECTED = 'rejected', 'Rejected'
@@ -87,6 +90,11 @@ class Voucher(models.Model):
     being = models.CharField(max_length=250)
     payee = models.CharField(max_length=150)
     category = models.ForeignKey(ExpenseCategory, on_delete=models.PROTECT, related_name='vouchers')
+    recommender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='+',
+                                    null=True, blank=True)
+    recommended_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='+',
+                                       null=True, blank=True)
+    recommended_at = models.DateTimeField(null=True, blank=True)
     approver = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='+',
                                  null=True, blank=True)
     approval_requested_at = models.DateTimeField(null=True, blank=True)
@@ -114,6 +122,7 @@ class Voucher(models.Model):
         indexes = [
             models.Index(fields=['branch', 'status', '-created_at'], name='voucher_branch_status_idx'),
             models.Index(fields=['status', 'approver', 'date'], name='voucher_approval_queue_idx'),
+            models.Index(fields=['status', 'recommender', 'date'], name='voucher_recommend_queue_idx'),
         ]
 
     @property

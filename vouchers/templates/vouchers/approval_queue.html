@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% load ui %}
-{% block title %}Voucher approvals{% endblock %}
+{% block title %}{{ queue_title }}{% endblock %}
 {% block content %}
-<div class="page-header"><div><h1>Voucher approvals</h1><p>Payment vouchers assigned to you for review</p></div></div>
+<div class="page-header"><div><h1>{{ queue_title }}</h1><p>{{ queue_description }}</p></div></div>
 {% if vouchers %}<div class="card voucher-table-card table-wrap"><table class="data">
   <thead><tr><th>Voucher</th><th>Payment date</th><th>Creator</th><th>Payee</th><th>Purpose</th><th>Amount</th></tr></thead>
   <tbody>{% for v in vouchers %}
@@ -10,5 +10,5 @@
       <td><b>{{ v.prepared_by.name }}</b></td><td>{{ v.payee }}</td><td>{{ v.being }}</td><td class="nowrap"><b>{{ v.amount|money }}</b></td></tr>
     {% endfor %}
   </tbody>
-</table></div>{% else %}<div class="card empty"><h3>No pending approvals</h3><p>No payment vouchers are waiting for your review.</p></div>{% endif %}
+</table></div>{% else %}<div class="card empty"><h3>No pending vouchers</h3><p>No payment vouchers are waiting for your review.</p></div>{% endif %}
 {% endblock %}

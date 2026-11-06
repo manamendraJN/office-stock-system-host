@@ -11,6 +11,7 @@ urlpatterns = [
     path('vouchers/<int:pk>/action/<str:action>/', views.voucher_action, name='voucher_action'),
     path('vouchers/<int:pk>/print/', views.voucher_print, name='voucher_print'),
     path('approvals/', views.approval_queue, name='approval_queue'),
+    path('recommendations/', views.recommendation_queue, name='recommendation_queue'),
     path('schedules/', views.schedule_list, name='schedule_list'),
     path('schedules/new/', views.schedule_create, name='schedule_create'),
     path('schedules/<int:pk>/edit/', views.schedule_update, name='schedule_update'),

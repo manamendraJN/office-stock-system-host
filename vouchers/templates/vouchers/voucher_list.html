@@ -21,7 +21,7 @@
       {% for v in vouchers %}
       <tr><td><a href="{% url 'vouchers:voucher_detail' v.pk %}"><strong>{{ v.number }}</strong></a><div class="small muted">{{ v.branch.name }}</div></td>
         <td class="nowrap muted">{{ v.date|fdate }}</td><td>{{ v.payee }}</td><td>{{ v.being }}</td><td class="nowrap"><b>{{ v.amount|money }}</b></td>
-        <td>{% if v.status == 'approved' %}{% badge v.get_status_display 'green' %}{% elif v.status == 'rejected' %}{% badge v.get_status_display 'red' %}{% elif v.status == 'pending' %}{% badge v.get_status_display 'amber' %}{% else %}{% badge v.get_status_display 'gray' %}{% endif %}</td></tr>
+        <td>{% if v.status == 'approved' %}{% badge v.get_status_display 'green' %}{% elif v.status == 'rejected' %}{% badge v.get_status_display 'red' %}{% elif v.status == 'pending' or v.status == 'recommending' %}{% badge v.get_status_display 'amber' %}{% else %}{% badge v.get_status_display 'gray' %}{% endif %}</td></tr>
       {% endfor %}
     </tbody>
   </table></div>{% else %}<div class="card empty"><h3>No payment vouchers found</h3><p>No payment vouchers match the current filters.</p></div>{% endif %}

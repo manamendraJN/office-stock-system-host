@@ -7,7 +7,7 @@
   <div class="form-actions"><a class="btn" href="{% url 'vouchers:schedule_create' %}">New schedule</a></div>
 </div>
 {% if schedules %}<div class="card table-wrap"><table class="data">
-  <thead><tr><th>Schedule</th><th>Next payment</th><th>Frequency</th><th>Payee</th><th>Amount</th><th>Approver</th><th>Status</th><th></th></tr></thead>
+  <thead><tr><th>Schedule</th><th>Next payment</th><th>Frequency</th><th>Payee</th><th>Amount</th><th>Recommender</th><th>Approver</th><th>Status</th><th></th></tr></thead>
   <tbody>{% for s in schedules %}
     <tr>
       <td><strong>{{ s.title }}</strong><div class="small muted">{{ s.branch.name }}</div></td>
@@ -15,6 +15,7 @@
       <td>{{ s.get_frequency_display }}</td>
       <td>{{ s.payee }}</td>
       <td class="nowrap"><strong>{{ s.amount|money }}</strong></td>
+      <td>{{ s.recommender.name|default:"—" }}</td>
       <td>{{ s.approver.name|default:"Self approval" }}</td>
       <td>{% if s.is_active %}{% badge "Active" "green" %}{% else %}{% badge "Paused" "gray" %}{% endif %}</td>
       <td class="right"><a class="btn btn-secondary btn-sm" href="{% url 'vouchers:schedule_update' s.pk %}">Edit</a></td>
