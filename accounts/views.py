@@ -5,7 +5,6 @@ from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from accounts import services
@@ -46,9 +45,6 @@ def login_view(request):
             except ServiceError as exc:
                 form.add_error(None, exc.message)
             else:
-                nxt = request.POST.get('next') or request.GET.get('next') or ''
-                if nxt and url_has_allowed_host_and_scheme(nxt, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
-                    return redirect(nxt)
                 return redirect('core:dashboard')
     return render(request, 'accounts/login.html', {'form': form, 'next': request.GET.get('next', '')})
 

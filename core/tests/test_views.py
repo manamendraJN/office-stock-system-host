@@ -38,6 +38,16 @@ class AccessTests(TestCase):
         })
         self.assertRedirects(response, reverse('core:dashboard'), fetch_redirect_response=False)
 
+    def test_successful_login_always_redirects_to_dashboard(self):
+        for email in ('admin@example.test', 'officer@example.test', 'kandy@example.test'):
+            client = Client()
+            response = client.post(reverse('accounts:login'), {
+                'email': email,
+                'password': PASSWORD,
+                'next': reverse('accounts:user_list'),
+            })
+            self.assertRedirects(response, reverse('core:dashboard'), fetch_redirect_response=False)
+
     def test_security_headers_and_external_motion_bootstrap(self):
         response = self.client.get(reverse('accounts:login'))
         self.assertIn('Content-Security-Policy', response)
