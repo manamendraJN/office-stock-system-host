@@ -8,6 +8,7 @@ from core.rules.report_rules import balance_report, dispatch_report, purchase_re
 from inventory.models import OfficeIssue, Purchase
 from inventory.services.stock import get_balances
 from pettycash.models import PettyCashEntry
+from vouchers.models import ExpenseCategory, Voucher, VoucherSchedule
 
 REPORTS = {
     'balances': {'label': 'Current stock', 'title': 'Current stock', 'dated': False,
@@ -19,6 +20,11 @@ REPORTS = {
                    'description': 'What was sent to each branch and what arrived'},
     'petty_cash': {'label': 'Petty cash', 'title': 'Petty cash', 'dated': True,
                    'description': 'Cash received, spent and reversed'},
+    'payment_vouchers': {'label': 'Payment vouchers', 'title': 'Payment vouchers', 'dated': True,
+                         'needs_voucher_module': True,
+                         'description': 'Payment vouchers, approvals, amounts and recurring schedule details'},
+    'money_flow': {'label': 'Money flow', 'title': 'Money flow', 'dated': True, 'needs_voucher_module': True,
+                   'description': 'Money movement from petty cash and approved payment vouchers'},
 }
 
 
@@ -108,6 +114,129 @@ def petty_cash_report(rng, *, branch_id=None, entry_type=''):
     }
 
 
+def payment_vouchers_report(rng, *, branch_id=None, status='', category_id=None, method='', schedule=''):
+    qs = Voucher.objects.select_related('branch', 'category', 'prepared_by', 'approver', 'approved_by', 'schedule')
+    if branch_id:
+        qs = qs.filter(branch_id=branch_id)
+    if status in dict(Voucher.Status.choices):
+        qs = qs.filter(status=status)
+    if category_id:
+        qs = qs.filter(category_id=category_id)
+    if method in dict(Voucher.PaymentMethod.choices):
+        qs = qs.filter(method_of_payment=method)
+    if schedule == 'scheduled':
+        qs = qs.filter(schedule__isnull=False)
+    elif schedule == 'unscheduled':
+        qs = qs.filter(schedule__isnull=True)
+    qs = _apply_dates(qs, 'date', rng).order_by('-date', '-created_at', '-id')
+    rows = []
+    approved_amount = pending_amount = Decimal('0.00')
+    for v in qs:
+        rows.append({
+            'date': v.date.strftime('%Y-%m-%d'),
+            'number': v.number or '—',
+            'branch': v.branch.name,
+            'payee': v.payee,
+            'purpose': v.being,
+            'category': v.category.name,
+            'method': v.get_method_of_payment_display(),
+            'status': v.get_status_display(),
+            'schedule': v.schedule.title if v.schedule_id else '—',
+            'scheduled_for': v.scheduled_for.strftime('%Y-%m-%d') if v.scheduled_for else '—',
+            'prepared_by': v.prepared_by.name,
+            'approved_by': v.approved_by.name if v.approved_by_id else '—',
+            'amount': v.amount,
+        })
+        if v.status == Voucher.Status.APPROVED:
+            approved_amount += v.amount
+        elif v.status == Voucher.Status.PENDING:
+            pending_amount += v.amount
+    return {
+        'columns': [
+            {'key': 'date', 'label': 'Date', 'type': 'code'},
+            {'key': 'number', 'label': 'Voucher', 'type': 'code'},
+            {'key': 'branch', 'label': 'Branch'},
+            {'key': 'payee', 'label': 'Payee'},
+            {'key': 'purpose', 'label': 'Purpose'},
+            {'key': 'category', 'label': 'Category'},
+            {'key': 'method', 'label': 'Method'},
+            {'key': 'status', 'label': 'Status', 'type': 'status'},
+            {'key': 'schedule', 'label': 'Schedule'},
+            {'key': 'scheduled_for', 'label': 'Scheduled for', 'type': 'code'},
+            {'key': 'prepared_by', 'label': 'Prepared by'},
+            {'key': 'approved_by', 'label': 'Approved by'},
+            {'key': 'amount', 'label': 'Amount', 'type': 'money', 'sum': True},
+        ],
+        'rows': rows,
+        'totals': {'amount': sum((row['amount'] for row in rows), Decimal('0.00'))},
+        'meta_counts': {'count': len(rows), 'approved_amount': approved_amount, 'pending_amount': pending_amount},
+    }
+
+
+def money_flow_report(rng, *, branch_id=None):
+    pc_qs = PettyCashEntry.objects.select_related('branch')
+    if branch_id:
+        pc_qs = pc_qs.filter(branch_id=branch_id)
+    pc_qs = _apply_dates(pc_qs, 'entry_date', rng).order_by('entry_date', 'created_at', 'id')
+
+    pv_qs = Voucher.objects.filter(status=Voucher.Status.APPROVED).select_related('branch', 'category')
+    if branch_id:
+        pv_qs = pv_qs.filter(branch_id=branch_id)
+    pv_qs = _apply_dates(pv_qs, 'date', rng).order_by('date', 'created_at', 'id')
+
+    rows = []
+    petty_in = petty_out = voucher_out = Decimal('0.00')
+    for entry in pc_qs:
+        amount = entry.amount
+        if amount >= 0:
+            petty_in += amount
+        else:
+            petty_out += -amount
+        rows.append({
+            'date': entry.entry_date.strftime('%Y-%m-%d'),
+            'branch': entry.branch.name,
+            'source': 'Petty cash',
+            'reference': f'PC-{entry.pk}',
+            'description': entry.description or '—',
+            'inflow': amount if amount > 0 else None,
+            'outflow': -amount if amount < 0 else None,
+            'amount': amount,
+            '_sort': (entry.entry_date.isoformat(), f'a{entry.created_at.isoformat() if entry.created_at else ""}', entry.pk),
+        })
+    for v in pv_qs:
+        voucher_out += v.amount
+        rows.append({
+            'date': v.date.strftime('%Y-%m-%d'),
+            'branch': v.branch.name,
+            'source': 'Payment voucher',
+            'reference': v.number or '—',
+            'description': f'{v.payee} — {v.being}',
+            'inflow': None,
+            'outflow': v.amount,
+            'amount': -v.amount,
+            '_sort': (v.date.isoformat(), f'b{v.created_at.isoformat() if v.created_at else ""}', v.pk),
+        })
+    rows.sort(key=lambda r: r['_sort'])
+    for r in rows:
+        r.pop('_sort', None)
+    net = petty_in - petty_out - voucher_out
+    return {
+        'columns': [
+            {'key': 'date', 'label': 'Date', 'type': 'code'},
+            {'key': 'branch', 'label': 'Branch'},
+            {'key': 'source', 'label': 'Source'},
+            {'key': 'reference', 'label': 'Reference', 'type': 'code'},
+            {'key': 'description', 'label': 'Description'},
+            {'key': 'inflow', 'label': 'Inflow', 'type': 'money', 'sum': True},
+            {'key': 'outflow', 'label': 'Outflow', 'type': 'money', 'sum': True},
+            {'key': 'amount', 'label': 'Net amount', 'type': 'money', 'sum': True},
+        ],
+        'rows': rows,
+        'totals': {'inflow': petty_in, 'outflow': petty_out + voucher_out, 'amount': net},
+        'meta_counts': {'petty_in': petty_in, 'petty_out': petty_out, 'voucher_out': voucher_out, 'net': net},
+    }
+
+
 def filter_options(user_branch_id=None):
     """Choices for the filter boxes (main-office users get branch and supplier lists)."""
     branch_side = bool(user_branch_id)
@@ -118,4 +247,6 @@ def filter_options(user_branch_id=None):
         qs = qs.filter(branch_id=user_branch_id)
     departments = sorted({d for d in qs.values_list('department', flat=True).distinct() if d}, key=str.lower)
     return {'branches': branches, 'suppliers': suppliers, 'departments': departments,
-            'petty_cash_types': PETTY_CASH_ENTRY_LABELS}
+            'petty_cash_types': PETTY_CASH_ENTRY_LABELS,
+            'voucher_statuses': Voucher.Status.choices, 'voucher_methods': Voucher.PaymentMethod.choices,
+            'voucher_categories': list(ExpenseCategory.objects.order_by('name'))}

@@ -108,6 +108,7 @@ form.inline { display: inline; }
 
 /* tables */
 .table-wrap { overflow-x: auto; }
+.table-wrap table.data { min-width: 100%; width: max-content; }
 table.data { width: 100%; border-collapse: collapse; font-size: .875rem; }
 table.data th { text-align: left; font-size: .75rem; text-transform: uppercase; letter-spacing: .03em; color: var(--s500); font-weight: 600;
   padding: .625rem 1rem; background: var(--s50); border-bottom: 1px solid var(--s200); white-space: nowrap; }

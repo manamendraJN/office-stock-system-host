@@ -69,6 +69,9 @@ h1 { font-size: 15pt; margin: var(--space-2) 0 var(--space-1); }
 .stock-report .col-unit { width: 8%; }
 .stock-report .col-status { width: 12%; }
 .stock-report .col-money { width: 12%; }
+.report-payment_vouchers .report-table th, .report-payment_vouchers .report-table td { padding: 5px 6px; font-size: 7.5pt; white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
+.report-payment_vouchers .report-table .number { white-space: nowrap; word-break: normal; }
+.report-money_flow .report-table th, .report-money_flow .report-table td { padding: 6px 7px; font-size: 8.5pt; }
 .badge { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 8pt; font-weight: 600; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 .badge-green { background: var(--green-bg); color: var(--green-ink); }
 .badge-amber { background: var(--amber-bg); color: var(--amber-ink); }
@@ -96,14 +99,16 @@ h1 { font-size: 15pt; margin: var(--space-2) 0 var(--space-1); }
 .page-count::after { content: counter(pages); }
 
 @media print {
-  @page { size: A4 portrait; margin: 16mm; }
+  @page { size: A4 landscape; margin: 12mm 10mm 14mm; }
   :root { background: #fff; }
   .report-document { width: auto; min-height: 0; margin: 0; padding: 0 0 14mm; box-shadow: none; }
+  .report-document.report-payment_vouchers .report-table { font-size: 6.8pt; }
+  .report-document.report-payment_vouchers .report-table th, .report-document.report-payment_vouchers .report-table td { padding: 3pt 3pt; }
   .report-header { break-after: avoid; }
   .report-table { break-inside: auto; }
   .report-table thead { display: table-header-group; }
   .report-table tfoot { display: table-footer-group; }
   .report-table tr { break-inside: avoid; page-break-inside: avoid; }
   .report-table tfoot tr { break-before: avoid; page-break-before: avoid; }
-  .report-footer { left: 16mm; right: 16mm; bottom: 8mm; }
+  .report-footer { left: 10mm; right: 10mm; bottom: 8mm; }
 }

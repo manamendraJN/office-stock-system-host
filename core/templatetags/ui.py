@@ -165,7 +165,8 @@ def signed(value):
     return f'+{value}' if value > 0 else f'−{abs(value)}' if value < 0 else '0'
 
 
-_STATUS_TONES = {'In stock': 'green', 'Low stock': 'amber', 'Out of stock': 'red', 'Inactive': 'gray'}
+_STATUS_TONES = {'In stock': 'green', 'Low stock': 'amber', 'Out of stock': 'red', 'Inactive': 'gray',
+                  'Approved': 'green', 'Awaiting approval': 'amber', 'Rejected': 'red', 'Draft': 'gray'}
 
 
 @register.simple_tag

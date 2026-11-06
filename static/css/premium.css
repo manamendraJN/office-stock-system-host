@@ -94,7 +94,7 @@ body { background: linear-gradient(180deg, #e8f4fc 0, #f5fafe 420px, #f8fafc 100
 
 /* ---------- hero (dashboard) ---------- */
 .page-header.hero { position: relative; overflow: hidden; align-items: center; border-radius: 26px; padding: 2.4rem 2.25rem 3.6rem; margin-bottom: 1.75rem; color: #fff;
-  background: radial-gradient(120% 150% at 0% 0%, #1089c9 0%, #0b5189 42%, #0a2b50 100%); box-shadow: var(--shadow-lg); }
+  background: radial-gradient(120% 150% at 0% 0%, #1089c9 0%, #0b5189 42%, #0a2b50 100%); box-shadow: var(--shadow-lg); animation: none !important; transform: none !important; opacity: 1 !important; }
 .page-header.hero h1 { color: #fff; -webkit-text-fill-color: #fff; background: none; font-size: 2.15rem; }
 .page-header.hero p { color: rgba(255, 255, 255, .8); }
 .page-header.hero > div { position: relative; z-index: 2; }
@@ -180,10 +180,8 @@ dl.facts dt { letter-spacing: .06em; }
 
 /* ---------- reveal on scroll (class added by motion.js; without it nothing is ever hidden) ---------- */
 .js :is(.card, .tile, .page-header:not(.hero), main > .alert):not(.in) { opacity: 0; }
-.js :is(.card, .tile, .page-header, main > .alert).in { opacity: 1; animation: reveal .8s var(--ease) backwards; animation-delay: var(--d, 0ms); }
+.js :is(.card, .tile, .page-header:not(.hero), main > .alert).in { opacity: 1; animation: reveal .8s var(--ease) backwards; animation-delay: var(--d, 0ms); }
 @keyframes reveal { from { opacity: 0; transform: translateY(26px) scale(.985); } }
-.js .page-header.hero { animation: heroIn 1s var(--ease) backwards; }
-@keyframes heroIn { from { opacity: 0; transform: translateY(18px) scale(.985); } }
 
 /* ---------- sign-in ---------- */
 body.auth { background: radial-gradient(130% 120% at 15% 0%, #0f4c81 0%, #0a2b50 45%, #061423 100%) fixed; min-height: 100vh; }
