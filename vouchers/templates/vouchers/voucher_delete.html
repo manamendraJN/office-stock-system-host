@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Delete {{ voucher.number }}{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Delete payment voucher</h1><p>Permanent deletion is restricted to the Super Admin.</p></div></div>
+<div class="card card-body stack medium">
+  <div class="alert alert-error" role="alert">
+    <strong>This action permanently deletes the voucher and cannot be undone.</strong>
+    An audit record will be retained with the voucher details, your account, and the deletion time.
+  </div>
+  <dl class="facts">
+    <div><dt>Payment Voucher ID</dt><dd><strong>{{ voucher.number }}</strong></dd></div>
+    <div><dt>Payee</dt><dd>{{ voucher.payee }}</dd></div>
+    <div><dt>Amount</dt><dd>{{ voucher.amount }}</dd></div>
+    <div><dt>Branch</dt><dd>{{ voucher.branch.name }}</dd></div>
+  </dl>
+  <form method="post" class="stack" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    <div class="field">
+      <label class="lbl" for="{{ form.voucher_id.id_for_label }}">Enter <strong>{{ voucher.number }}</strong> to confirm deletion</label>
+      {{ form.voucher_id }}
+      <div class="hint">The entered Payment Voucher ID must exactly match the voucher selected above.</div>
+      {% for error in form.voucher_id.errors %}<div class="err" role="alert">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="form-actions">
+      <a class="btn btn-secondary" href="{% url 'vouchers:voucher_detail' voucher.pk %}">Cancel</a>
+      <button class="btn btn-danger" type="submit">Permanently delete voucher</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

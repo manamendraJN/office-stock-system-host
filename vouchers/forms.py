@@ -179,6 +179,25 @@ class RejectVoucherForm(forms.Form):
         return reason
 
 
+class DeleteVoucherForm(forms.Form):
+    voucher_id = forms.CharField(max_length=30, label='Payment Voucher ID')
+
+    def __init__(self, *args, voucher_number, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.voucher_number = voucher_number
+        self.fields['voucher_id'].widget.attrs.update({
+            'class': 'form-control',
+            'autocomplete': 'off',
+            'placeholder': voucher_number,
+        })
+
+    def clean_voucher_id(self):
+        voucher_id = self.cleaned_data['voucher_id'].strip()
+        if voucher_id != self.voucher_number:
+            raise ValidationError('The entered Payment Voucher ID does not match the selected voucher.')
+        return voucher_id
+
+
 class ExpenseCategoryForm(forms.ModelForm):
     class Meta:
         model = ExpenseCategory

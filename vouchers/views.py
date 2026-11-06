@@ -1,16 +1,19 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_http_methods
 from django.views.decorators.http import require_POST
 
+from core.constants import ROLES
 from core.decorators import permission_required
 from core.errors import ServiceError
 from core.forms import apply_service_error
 from core.models import Setting
 from core.permissions import has_any, is_branch_side
-from vouchers.forms import ExpenseCategoryForm, RejectVoucherForm, VoucherForm, VoucherScheduleForm
+from vouchers.forms import DeleteVoucherForm, ExpenseCategoryForm, RejectVoucherForm, VoucherForm, VoucherScheduleForm
 from vouchers.models import ExpenseCategory, Voucher, VoucherSchedule
 from vouchers import services
 
@@ -117,7 +120,32 @@ def voucher_detail(request, pk):
                        and not is_branch_side(request.user)
                        and voucher.approver_id == request.user.pk
                        and voucher.status == Voucher.Status.PENDING,
+        'can_delete': request.user.role == ROLES.SUPER_ADMIN,
         'reject_form': RejectVoucherForm(),
+    })
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def voucher_delete(request, pk):
+    if request.user.role != ROLES.SUPER_ADMIN:
+        raise PermissionDenied('Only the Super Admin can permanently delete payment vouchers.')
+    voucher = get_object_or_404(
+        Voucher.objects.select_related('branch', 'category', 'prepared_by'),
+        pk=pk,
+    )
+    form = DeleteVoucherForm(request.POST or None, voucher_number=voucher.number)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            deleted = services.delete_voucher(request, voucher.pk, form.cleaned_data['voucher_id'])
+        except ServiceError as exc:
+            apply_service_error(form, exc)
+        else:
+            messages.success(request, f'Payment voucher {deleted["number"]} was permanently deleted.')
+            return redirect('vouchers:voucher_list')
+    return render(request, 'vouchers/voucher_delete.html', {
+        'voucher': voucher,
+        'form': form,
     })
 
 

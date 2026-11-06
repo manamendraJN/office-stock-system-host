@@ -7,6 +7,7 @@
   <div class="form-actions">
     {% if can_edit %}<a class="btn btn-secondary" href="{% url 'vouchers:voucher_update' voucher.pk %}">Edit</a>{% endif %}
     {% if can_print %}<a class="btn" href="{% url 'vouchers:voucher_print' voucher.pk %}">Print voucher</a>{% endif %}
+    {% if can_delete %}<a class="btn btn-danger" href="{% url 'vouchers:voucher_delete' voucher.pk %}">Delete voucher</a>{% endif %}
   </div>
 </div>
 {% if voucher.status == "rejected" %}<div class="alert alert-error"><strong>Rejected:</strong> {{ voucher.rejection_reason }}</div>{% endif %}

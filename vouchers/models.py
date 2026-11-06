@@ -138,7 +138,9 @@ class VoucherEventQuerySet(AppendOnlyQuerySet):
 
 
 class VoucherEvent(AppendOnlyModel):
-    voucher = models.ForeignKey(Voucher, on_delete=models.PROTECT, related_name='events')
+    voucher = models.ForeignKey(Voucher, on_delete=models.SET_NULL, related_name='events',
+                                null=True, blank=True)
+    voucher_number = models.CharField(max_length=30, blank=True, default='')
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='+')
     action = models.CharField(max_length=30)
     previous_status = models.CharField(max_length=12, blank=True, default='')
@@ -153,4 +155,5 @@ class VoucherEvent(AppendOnlyModel):
         ordering = ['created_at', 'pk']
 
     def __str__(self):
-        return f'{self.voucher.number}: {self.action}'
+        number = self.voucher.number if self.voucher_id else self.voucher_number
+        return f'{number}: {self.action}'

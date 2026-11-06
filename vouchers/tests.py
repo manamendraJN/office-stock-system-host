@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from accounts.models import Branch, User
 from core.constants import BRANCH_TYPES
-from core.models import Setting
+from core.models import AuditLog, Setting
 from vouchers.models import ExpenseCategory, Voucher, VoucherEvent, VoucherSchedule
 from vouchers.services import generate_due_schedules
 
@@ -169,6 +169,52 @@ class VoucherWorkflowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'must be different users')
         self.assertFalse(Voucher.objects.exists())
+
+    def test_only_super_admin_can_permanently_delete_after_matching_id_confirmation(self):
+        self.client.force_login(self.creator)
+        response = self.client.post(reverse('vouchers:voucher_create'), self.voucher_data(action='draft'))
+        self.assertEqual(response.status_code, 302)
+        voucher = Voucher.objects.get(prepared_by=self.creator)
+        delete_url = reverse('vouchers:voucher_delete', args=[voucher.pk])
+
+        self.client.force_login(self.manager)
+        detail = self.client.get(reverse('vouchers:voucher_detail', args=[voucher.pk]))
+        self.assertNotContains(detail, 'Delete voucher')
+        self.assertEqual(self.client.get(delete_url).status_code, 403)
+        self.assertEqual(self.client.post(delete_url, {'voucher_id': voucher.number}).status_code, 403)
+        self.assertTrue(Voucher.objects.filter(pk=voucher.pk).exists())
+        self.assertFalse(AuditLog.objects.filter(action='payment_voucher.delete').exists())
+
+        admin = User.objects.create_user(
+            'super-admin@example.test', 'Strong-Passw0rd!', name='Super Admin',
+            role='super_admin', branch=self.branch,
+        )
+        self.client.force_login(admin)
+        self.assertContains(self.client.get(reverse('vouchers:voucher_detail', args=[voucher.pk])), 'Delete voucher')
+        confirmation = self.client.get(delete_url)
+        self.assertEqual(confirmation.status_code, 200)
+        self.assertContains(confirmation, 'permanently deletes the voucher')
+        self.assertContains(confirmation, voucher.number)
+
+        mismatch = self.client.post(delete_url, {'voucher_id': 'PV-WRONG'})
+        self.assertEqual(mismatch.status_code, 200)
+        self.assertContains(mismatch, 'does not match the selected voucher')
+        self.assertTrue(Voucher.objects.filter(pk=voucher.pk).exists())
+        self.assertFalse(AuditLog.objects.filter(action='payment_voucher.delete').exists())
+
+        response = self.client.post(delete_url, {'voucher_id': voucher.number})
+        self.assertRedirects(response, reverse('vouchers:voucher_list'))
+        self.assertFalse(Voucher.objects.filter(pk=voucher.pk).exists())
+
+        audit = AuditLog.objects.get(action='payment_voucher.delete', record_id=str(voucher.pk))
+        self.assertEqual(audit.user, admin)
+        self.assertEqual(audit.old_value['number'], voucher.number)
+        self.assertEqual(audit.new_value['deleted_voucher_id'], voucher.pk)
+        self.assertEqual(audit.new_value['deleted_by_id'], admin.pk)
+        self.assertEqual(audit.new_value['deleted_by'], admin.get_username())
+        self.assertTrue(audit.new_value['deleted_at'])
+        event = VoucherEvent.objects.get(voucher_number=voucher.number, action='created')
+        self.assertIsNone(event.voucher_id)
 
     def test_self_approval_cannot_bypass_an_assigned_recommender(self):
         self.creator.permissions = [

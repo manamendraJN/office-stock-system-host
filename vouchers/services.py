@@ -6,10 +6,11 @@ from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
 
+from core.constants import ROLES
 from core.errors import BadRequest, Conflict, Forbidden, NotFound
-from core.models import Setting
+from core.models import AuditLog, Setting
 from core.permissions import can_access_branch, has_any, is_branch_side
-from core.services.audit import log_audit
+from core.services.audit import client_ip, log_audit
 from core.services.sequence import next_number
 from vouchers.forms import eligible_approvers, eligible_recommenders
 from vouchers.models import ExpenseCategory, Voucher, VoucherEvent, VoucherSchedule
@@ -52,7 +53,7 @@ def get_schedule(user, pk, *, for_update=False):
 
 def _event(voucher, actor, action, previous='', note=''):
     VoucherEvent.objects.create(
-        voucher=voucher, actor=actor, action=action, previous_status=previous,
+        voucher=voucher, voucher_number=voucher.number, actor=actor, action=action, previous_status=previous,
         new_status=voucher.status, note=(note or '')[:500],
     )
 
@@ -64,6 +65,7 @@ def _audit(request, action, voucher, *, old=None, new=None):
 
 def _voucher_snapshot(voucher):
     return {
+        'id': voucher.pk,
         'number': voucher.number,
         'amount': str(voucher.amount),
         'date': voucher.date.isoformat(),
@@ -79,6 +81,49 @@ def _voucher_snapshot(voucher):
         'recommender_id': voucher.recommender_id,
         'approver_id': voucher.approver_id,
     }
+
+
+def delete_voucher(request, voucher_id, confirmed_voucher_number):
+    if request.user.role != ROLES.SUPER_ADMIN:
+        raise Forbidden('Only the Super Admin can permanently delete payment vouchers.')
+    _ensure_module()
+    with transaction.atomic():
+        voucher = (Voucher.objects.select_for_update()
+                   .select_related('branch', 'category', 'prepared_by', 'recommender', 'recommended_by',
+                                   'approver', 'approved_by')
+                   .filter(pk=voucher_id).first())
+        if voucher is None:
+            raise NotFound('Payment voucher not found')
+        if confirmed_voucher_number != voucher.number:
+            raise BadRequest('The entered Payment Voucher ID does not match the selected voucher.')
+
+        deleted_at = timezone.now()
+        snapshot = _voucher_snapshot(voucher)
+        snapshot.update({
+            'status': voucher.status,
+            'rejection_reason': voucher.rejection_reason,
+            'prepared_by_id': voucher.prepared_by_id,
+            'prepared_by_name': voucher.prepared_by.name,
+            'recommender_name': voucher.recommended_by.name if voucher.recommended_by_id else '',
+            'approver_name': voucher.approved_by.name if voucher.approved_by_id else '',
+        })
+        AuditLog.objects.create(
+            user=request.user,
+            action='payment_voucher.delete',
+            record_type='PaymentVoucher',
+            record_id=str(voucher.pk),
+            old_value=snapshot,
+            new_value={
+                'deleted_voucher_id': voucher.pk,
+                'voucher_number': voucher.number,
+                'deleted_by_id': request.user.pk,
+                'deleted_by': request.user.get_username(),
+                'deleted_at': deleted_at.isoformat(),
+            },
+            ip=client_ip(request),
+        )
+        voucher.delete()
+    return snapshot
 
 
 def _schedule_snapshot(schedule):
