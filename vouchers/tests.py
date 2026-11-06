@@ -119,7 +119,15 @@ class VoucherWorkflowTests(TestCase):
         self.assertEqual(voucher.status, Voucher.Status.APPROVED)
         self.assertEqual(voucher.events.count(), 4)
         self.client.force_login(self.creator)
-        self.assertEqual(self.client.get(reverse('vouchers:voucher_print', args=[voucher.pk])).status_code, 200)
+        printed = self.client.get(reverse('vouchers:voucher_print', args=[voucher.pk]))
+        self.assertEqual(printed.status_code, 200)
+        self.assertContains(printed, '@page { size: A4 landscape;')
+        self.assertContains(printed, 'Recommended By')
+        self.assertContains(printed, self.recommender.name)
+        self.assertContains(printed, 'Recommendation Date')
+        self.assertContains(printed, timezone.localtime(voucher.recommended_at).strftime('%d-%m-%Y %H:%M'))
+        self.assertContains(printed, '<div class="voucher-signature">Payee Signature</div>', html=True)
+        self.assertContains(printed, '<div class="voucher-signature">Authorized Signature</div>', html=True)
 
     def test_recommendation_rejection_returns_to_creator_for_resubmission(self):
         self.client.force_login(self.creator)
