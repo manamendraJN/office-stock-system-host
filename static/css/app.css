@@ -30,6 +30,8 @@ h1, h2, h3 { margin: 0; color: var(--s900); }
 .sidebar { width: 256px; flex: none; background: #fff; border-right: 1px solid var(--s200); display: flex; flex-direction: column; }
 .brand { height: 64px; display: flex; align-items: center; gap: .5rem; padding: 0 1.25rem; border-bottom: 1px solid var(--s200); }
 .brand-mark { width: 32px; height: 32px; border-radius: 8px; background: var(--brand-600); color: #fff; display: flex; align-items: center; justify-content: center; }
+.brand-logo-frame { width: 32px; height: 32px; flex: none; display: flex; align-items: center; justify-content: center; padding: 2px; border-radius: 8px; background: #fff; overflow: hidden; }
+.brand-logo { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; }
 .brand-name { font-size: 1.125rem; font-weight: 700; color: var(--s900); }
 .nav { flex: 1; padding: 1rem .75rem; display: flex; flex-direction: column; gap: .25rem; overflow-y: auto; }
 .nav a { display: flex; align-items: center; gap: .75rem; padding: .625rem .75rem; border-radius: 8px; font-size: .875rem; font-weight: 500; color: var(--s600); }
@@ -106,6 +108,7 @@ form.inline { display: inline; }
 
 /* tables */
 .table-wrap { overflow-x: auto; }
+.table-wrap table.data { min-width: 100%; width: max-content; }
 table.data { width: 100%; border-collapse: collapse; font-size: .875rem; }
 table.data th { text-align: left; font-size: .75rem; text-transform: uppercase; letter-spacing: .03em; color: var(--s500); font-weight: 600;
   padding: .625rem 1rem; background: var(--s50); border-bottom: 1px solid var(--s200); white-space: nowrap; }
@@ -178,6 +181,10 @@ ul.rows li:last-child { border-bottom: 0; }
 .auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
 .auth-box { width: 100%; max-width: 24rem; }
 .auth-box .brand-mark { width: 48px; height: 48px; border-radius: 12px; margin: 0 auto 1rem; }
+.auth-logo-frame { width: 128px; height: 52px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
+.auth-logo { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; }
+.setting-group { padding-top: 1rem; border-top: 1px solid var(--s200); }
+.setting-group h3 { margin: 0 0 .75rem; font-size: .9375rem; }
 
 /* tabs / segmented */
 .seg { display: inline-flex; border: 1px solid var(--s300); border-radius: 8px; overflow: hidden; background: #fff; }

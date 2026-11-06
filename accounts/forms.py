@@ -7,9 +7,9 @@ from core.forms import DateInput  # noqa: F401  (re-exported for convenience)
 
 class LoginForm(forms.Form):
     email = forms.EmailField(label='Email', error_messages={'required': 'Enter a valid email', 'invalid': 'Enter a valid email'},
-                             widget=forms.EmailInput(attrs={'autocomplete': 'username', 'autofocus': True}))
+                             widget=forms.EmailInput(attrs={'autocomplete': 'email', 'placeholder': 'name@company.com', 'autofocus': True}))
     password = forms.CharField(label='Password', error_messages={'required': 'Enter your password'},
-                               widget=forms.PasswordInput(attrs={'autocomplete': 'current-password'}))
+                               widget=forms.PasswordInput(attrs={'autocomplete': 'current-password', 'placeholder': 'Enter your password'}))
 
     def clean_email(self):
         return self.cleaned_data['email'].strip().lower()
@@ -129,3 +129,23 @@ class BranchForm(forms.Form):
 
 class SettingsCompanyForm(forms.Form):
     company_name = forms.CharField(label='Company name', max_length=120, error_messages={'required': 'Enter the company name'})
+    system_display_name = forms.CharField(label='System display name', max_length=120,
+                                           error_messages={'required': 'Enter the system display name'})
+    company_logo = forms.FileField(label='Company logo', required=False,
+                                   widget=forms.ClearableFileInput(attrs={'accept': 'image/*'}))
+    show_company_name_login = forms.BooleanField(label='Show company name on login page', required=False)
+    show_company_name_system = forms.BooleanField(label='Show system display name after login', required=False)
+    login_logo_size = forms.IntegerField(label='Login logo size (px)', min_value=64, max_value=240)
+    login_logo_offset_x = forms.IntegerField(label='Login logo horizontal offset (px)', min_value=-80, max_value=80)
+    login_logo_offset_y = forms.IntegerField(label='Login logo vertical offset (px)', min_value=-50, max_value=50)
+    login_logo_alignment = forms.ChoiceField(label='Login logo alignment', choices=(('left', 'Left'), ('center', 'Center'), ('right', 'Right')))
+    system_logo_size = forms.IntegerField(label='System logo size (px)', min_value=20, max_value=96)
+    system_logo_offset_x = forms.IntegerField(label='System logo horizontal offset (px)', min_value=-40, max_value=40)
+    system_logo_offset_y = forms.IntegerField(label='System logo vertical offset (px)', min_value=-40, max_value=40)
+    system_logo_alignment = forms.ChoiceField(label='System logo alignment', choices=(('left', 'Left'), ('center', 'Center'), ('right', 'Right')))
+
+    def clean_company_logo(self):
+        logo = self.cleaned_data.get('company_logo')
+        if logo and not (logo.content_type or '').startswith('image/'):
+            raise forms.ValidationError('Upload an image file for the company logo.')
+        return logo

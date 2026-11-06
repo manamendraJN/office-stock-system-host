@@ -31,6 +31,7 @@ ICON_PATHS = {
     'alert': 'M12 9v4M12 17h.01M10.3 3.9L2.4 18a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z',
     'wallet': 'M3 7a2 2 0 012-2h12v4M3 7v11a2 2 0 002 2h14a1 1 0 001-1v-3M3 7h15a2 2 0 012 2v3M21 12h-4a2 2 0 100 4h4v-4z',
     'store': 'M3 9l1.5-5h15L21 9M3 9h18M3 9a3 3 0 006 0 3 3 0 006 0 3 3 0 006 0M5 12v8h14v-8M10 20v-4h4v4',
+    'receipt': 'M6 3h12v18l-6-3-6 3V3zM9 8h6M9 12h6',
 }
 
 
@@ -164,7 +165,8 @@ def signed(value):
     return f'+{value}' if value > 0 else f'−{abs(value)}' if value < 0 else '0'
 
 
-_STATUS_TONES = {'In stock': 'green', 'Low stock': 'amber', 'Out of stock': 'red', 'Inactive': 'gray'}
+_STATUS_TONES = {'In stock': 'green', 'Low stock': 'amber', 'Out of stock': 'red', 'Inactive': 'gray',
+                  'Approved': 'green', 'Awaiting approval': 'amber', 'Rejected': 'red', 'Draft': 'gray'}
 
 
 @register.simple_tag

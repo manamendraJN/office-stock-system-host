@@ -26,9 +26,12 @@ Built with Python, Django, WhiteNoise, Docker, and Caddy with automatic SSL (Let
 - **Purchasing & Issues**: Purchase order receiving (with partial receive support) and cancel-by-reversal office issues.
 - **Branch Requests & Dispatches**: Requests raised by branches, reviewed by managers, dispatched with discrepancy/damage tracking.
 - **Petty Cash Module**: Branch-specific petty cash request workflow, manager approvals, expense recording, and low-cash alerts.
+- **Payment Vouchers**: Role-controlled payment vouchers, assigned-manager approvals, printable approved records, and recurring payment schedules.
 - **Role-Based Access Control (RBAC)**: Fine-grained permissions per user and role (Super Admin, Stock Officer, Branch User, Viewer).
 - **Audit Logging**: Append-only audit trail capturing user actions, IP addresses, and timestamps.
 - **Reports**: Stock balance, purchase summaries, usage statistics, and dispatch reports with CSV export and print view.
+
+Enable the module in **Settings**, then assign `vouchers.create`, `vouchers.recommend`, `vouchers.approve`, `vouchers.view`, and `vouchers.print` through the existing User or Role permission picker. A voucher assigned to a recommender moves to the approver only after recommendation; rejection at either stage requires a reason and returns the voucher to its preparer. Self-approval requires both the global Settings switch and `vouchers.self_approve` on the creator's account or role, and cannot bypass an assigned recommender. `vouchers.schedule` manages recurring schedules and `vouchers.configure` manages expense categories and budgets. Branch-side users remain scoped to their assigned branch.
 
 ---
 
@@ -244,6 +247,13 @@ docker compose exec -it web python manage.py restore_db --file /srv/app/backups/
 
 ## Maintenance & Scheduled Tasks
 
+### Payment Voucher Scheduling
+After enabling the Payment Voucher module in Settings, configure a daily scheduled invocation of:
+```bash
+python manage.py generate_recurring
+```
+Each due schedule creates a voucher routed to its assigned manager. Self-approval is only used when the global setting is enabled and the schedule creator has the self-approval permission. Voucher approval does not post an additional stock or petty-cash ledger movement.
+
 ### 30-Day Stock Ledger Retention
 To keep the stock ledger lean and fast, transactions older than 30 days can be consolidated into single opening balances per item and location.
 
@@ -293,6 +303,7 @@ inventory-system/
 ├── inventory/                 # Stock balances, purchases, office issues, ledger
 ├── pettycash/                 # Branch petty cash requests, approvals, disbursements
 ├── reports/                   # Stock, purchase, usage, and dispatch reporting
+├── vouchers/                  # Payment vouchers, approval history, and recurring schedules
 ├── scripts/                   # Backup and development utility scripts
 ├── static/                    # CSS, JavaScript, and static assets
 ├── templates/                 # Server-rendered HTML templates

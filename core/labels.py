@@ -127,6 +127,17 @@ ACTION_LABELS = {
     'petty_cash.expense': 'Recorded a petty cash expense',
     'petty_cash.cancel_expense': 'Cancelled a petty cash expense',
     'petty_cash.set_low_level': 'Changed the low petty cash level',
+    'payment_voucher.create': 'Created a payment voucher',
+    'payment_voucher.update': 'Edited a payment voucher',
+    'payment_voucher.submit': 'Submitted a payment voucher for approval',
+    'payment_voucher.self_approve': 'Self-approved a payment voucher',
+    'payment_voucher.approve': 'Approved a payment voucher',
+    'payment_voucher.reject': 'Rejected a payment voucher',
+    'payment_voucher.schedule_create': 'Created a payment voucher schedule',
+    'payment_voucher.schedule_update': 'Edited a payment voucher schedule',
+    'payment_voucher.schedule_generate': 'Generated a scheduled payment voucher',
+    'payment_voucher.category_create': 'Added a voucher expense category',
+    'payment_voucher.category_update': 'Edited a voucher expense category',
 }
 
 AREA_LABELS = {
@@ -134,10 +145,11 @@ AREA_LABELS = {
     'audit': 'Audit log', 'category': 'Categories', 'item': 'Items', 'supplier': 'Suppliers',
     'purchase': 'Purchases', 'issue': 'Office issues', 'stock': 'Stock', 'request': 'Requests',
     'dispatch': 'Dispatches', 'petty_cash': 'Petty cash',
+    'payment_voucher': 'Payment vouchers',
 }
 
-_RED = re.compile(r'\.(delete|cancel|cancel_expense|deactivate|disable|clear_range|retention_cleanup)$')
-_GREEN = re.compile(r'\.(create|receive|enable)$')
+_RED = re.compile(r'\.(delete|cancel|cancel_expense|deactivate|disable|clear_range|retention_cleanup|reject)$')
+_GREEN = re.compile(r'\.(create|receive|enable|approve|self_approve)$')
 _AMBER = re.compile(r'^(auth|settings|user\.reset)')
 
 

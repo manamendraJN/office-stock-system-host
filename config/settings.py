@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'inventory',
     'branchops',
     'pettycash',
+    'vouchers',
     'reports',
 ]
 
@@ -179,6 +180,8 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+MEDIA_URL = '/media/'
+MEDIA_ROOT = Path(env('MEDIA_ROOT', str(BASE_DIR / 'media')))
 STORAGES = {
     'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
     'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'

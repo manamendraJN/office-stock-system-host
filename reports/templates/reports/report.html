@@ -11,7 +11,7 @@
 <body>
 <main class="report-document{% if rtype == 'balances' %} stock-report{% endif %}">
   <header class="report-header">
-    <div class="company-name">{{ app_settings.company_name }}</div>
+    <div class="report-brand">{% if app_settings.company_logo %}<img src="{% url 'core:company_logo' %}" alt="{{ app_settings.company_name }}">{% endif %}<div class="company-name">{{ app_settings.company_name }}</div></div>
     <h1>{{ meta.title }} Report</h1>
     <p class="subtitle">{{ meta.description }}</p>
     <dl class="report-details">
@@ -31,9 +31,23 @@
         <div><span>Below minimum</span><strong>{% for group in stock_statuses %}{% if group.grouper == 'Low stock' %}{{ group.list|length }}{% endif %}{% endfor %}</strong></div>
         <div><span>Total value</span><strong>{% for c in columns %}{% if c.key == 'value' %}{% report_cell c totals.value %}{% endif %}{% endfor %}</strong></div>
       </section>
+    {% elif rtype == 'payment_vouchers' and result.meta_counts %}
+      <section class="summary-strip" aria-label="Payment voucher summary">
+        <div><span>Vouchers</span><strong>{{ result.meta_counts.count }}</strong></div>
+        <div><span>Total amount</span><strong>{{ totals.amount|money }}</strong></div>
+        <div><span>Approved amount</span><strong>{{ result.meta_counts.approved_amount|money }}</strong></div>
+        <div><span>Awaiting approval</span><strong>{{ result.meta_counts.pending_amount|money }}</strong></div>
+      </section>
+    {% elif rtype == 'money_flow' and result.meta_counts %}
+      <section class="summary-strip" aria-label="Money flow summary">
+        <div><span>Petty cash in</span><strong>{{ result.meta_counts.petty_in|money }}</strong></div>
+        <div><span>Petty cash out</span><strong>{{ result.meta_counts.petty_out|money }}</strong></div>
+        <div><span>Approved vouchers out</span><strong>{{ result.meta_counts.voucher_out|money }}</strong></div>
+        <div><span>Net movement</span><strong>{{ result.meta_counts.net|money }}</strong></div>
+      </section>
     {% endif %}
 
-    <table class="report-table">
+    <table class="report-table report-{{ rtype }}">
       {% if rtype == 'balances' %}
         <colgroup><col class="col-code"><col class="col-item"><col class="col-category"><col class="col-number"><col class="col-unit"><col class="col-number"><col class="col-status"><col class="col-money"><col class="col-money"></colgroup>
       {% endif %}

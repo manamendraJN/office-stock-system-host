@@ -52,6 +52,21 @@
         {% for b in opts.branches %}<option value="{{ b.pk }}" {% if f.branch == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>{% endfor %}</select>{% endif %}
       <select name="entry_type" aria-label="Type" style="width:auto" onchange="this.form.submit()"><option value="">All types</option>
         {% for value, info in opts.petty_cash_types.items %}<option value="{{ value }}" {% if f.entry_type == value %}selected{% endif %}>{{ info.label }}</option>{% endfor %}</select>
+    {% elif rtype == 'payment_vouchers' %}
+      {% if opts.branches %}<select name="branch" aria-label="Branch" style="width:auto" onchange="this.form.submit()"><option value="">All branches</option>
+        {% for b in opts.branches %}<option value="{{ b.pk }}" {% if f.branch == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>{% endfor %}</select>{% endif %}
+      <select name="vstatus" aria-label="Status" style="width:auto" onchange="this.form.submit()"><option value="">All statuses</option>
+        {% for value, label in opts.voucher_statuses %}<option value="{{ value }}" {% if f.vstatus == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+      <select name="category" aria-label="Category" style="width:auto" onchange="this.form.submit()"><option value="">All categories</option>
+        {% for c in opts.voucher_categories %}<option value="{{ c.pk }}" {% if f.category == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
+      <select name="method" aria-label="Method" style="width:auto" onchange="this.form.submit()"><option value="">All methods</option>
+        {% for value, label in opts.voucher_methods %}<option value="{{ value }}" {% if f.method == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+      <select name="schedule" aria-label="Schedule" style="width:auto" onchange="this.form.submit()"><option value="">All vouchers</option>
+        <option value="scheduled" {% if f.schedule == 'scheduled' %}selected{% endif %}>Scheduled only</option>
+        <option value="unscheduled" {% if f.schedule == 'unscheduled' %}selected{% endif %}>Not scheduled</option></select>
+    {% elif rtype == 'money_flow' %}
+      {% if opts.branches %}<select name="branch" aria-label="Branch" style="width:auto" onchange="this.form.submit()"><option value="">All branches</option>
+        {% for b in opts.branches %}<option value="{{ b.pk }}" {% if f.branch == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>{% endfor %}</select>{% endif %}
     {% elif rtype == 'dispatches' and other_branches %}
       <select name="destination" aria-label="Branch" style="width:auto" onchange="this.form.submit()"><option value="">All branches</option>
         {% for b in other_branches %}<option value="{{ b.pk }}" {% if f.destination == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>{% endfor %}</select>
@@ -61,7 +76,7 @@
 
 {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
 
-<div class="reports-print-document">
+<div class="reports-print-document report-{{ rtype }}">
 <div class="report-heading{% if not view_report %} print-only{% endif %}">
   <div class="report-company">{{ app_settings.company_name|default:"Heritage Crops Plantations (Pvt) Ltd" }}</div>
   <h2>{{ meta.title }} Report</h2>
@@ -73,8 +88,23 @@
   {% if not rows %}
     <div class="card empty report-content"><h3>Nothing to report</h3><p>{% if meta.dated %}No records in this period. Try a wider date range.{% else %}There are no items to show.{% endif %}</p></div>
   {% else %}
+    {% if rtype == 'payment_vouchers' and result.meta_counts %}
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;margin-bottom:.75rem">
+        <div class="card card-body"><div class="small muted">Vouchers</div><div style="font-size:1.25rem;font-weight:700">{{ result.meta_counts.count }}</div></div>
+        <div class="card card-body"><div class="small muted">Total amount</div><div style="font-size:1.25rem;font-weight:700">{{ totals.amount|money }}</div></div>
+        <div class="card card-body"><div class="small muted">Approved amount</div><div style="font-size:1.25rem;font-weight:700">{{ result.meta_counts.approved_amount|money }}</div></div>
+        <div class="card card-body"><div class="small muted">Awaiting approval</div><div style="font-size:1.25rem;font-weight:700">{{ result.meta_counts.pending_amount|money }}</div></div>
+      </div>
+    {% elif rtype == 'money_flow' and result.meta_counts %}
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;margin-bottom:.75rem">
+        <div class="card card-body"><div class="small muted">Petty cash in</div><div style="font-size:1.25rem;font-weight:700">{{ result.meta_counts.petty_in|money }}</div></div>
+        <div class="card card-body"><div class="small muted">Petty cash out</div><div style="font-size:1.25rem;font-weight:700">{{ result.meta_counts.petty_out|money }}</div></div>
+        <div class="card card-body"><div class="small muted">Approved vouchers out</div><div style="font-size:1.25rem;font-weight:700">{{ result.meta_counts.voucher_out|money }}</div></div>
+        <div class="card card-body"><div class="small muted">Net movement</div><div style="font-size:1.25rem;font-weight:700">{{ result.meta_counts.net|money }}</div></div>
+      </div>
+    {% endif %}
     <p class="no-print small muted">{{ scope }} · {{ period }} · {{ rows|length|plural:"row" }}</p>
-    <div class="card table-wrap report-content"><table class="data">
+    <div class="card table-wrap report-content"><table class="data report-table report-{{ rtype }}">
       <thead><tr>{% for c in columns %}<th class="{% if c.type == 'number' or c.type == 'money' %}num{% endif %}">{{ c.label }}</th>{% endfor %}</tr></thead>
       <tbody>{% for r in rows %}<tr>{% for cell in r.cells %}
         <td class="{% if cell.col.type == 'number' or cell.col.type == 'money' %}num nowrap{% endif %}{% if cell.col.key == 'name' or cell.col.key == 'supplier' or cell.col.key == 'department' %} strong{% endif %}">{% report_cell cell.col cell.value %}</td>{% endfor %}</tr>{% endfor %}</tbody>
@@ -84,7 +114,9 @@
     {% if rtype == 'balances' %}<p class="small muted">Stock value is the quantity multiplied by each item's last purchase cost. Items with no recorded cost show a dash.</p>
     {% elif rtype == 'purchases' %}<p class="small muted">Cancelled purchases are left out. "Received value" counts only what has actually arrived.</p>
     {% elif rtype == 'usage' %}<p class="small muted">Cancelled issues are left out. Quantities are not added together because the units differ.</p>
-    {% elif rtype == 'petty_cash' %}<p class="small muted">Positive amounts add cash; negative amounts spend or reverse cash. The total is the net movement.</p>{% endif %}
+    {% elif rtype == 'petty_cash' %}<p class="small muted">Positive amounts add cash; negative amounts spend or reverse cash. The total is the net movement.</p>
+    {% elif rtype == 'payment_vouchers' %}<p class="small muted">Includes draft, awaiting approval, approved and rejected vouchers in the selected period. Use filters for schedule, category, method and status. Money flow is a separate report.</p>
+    {% elif rtype == 'money_flow' %}<p class="small muted">Combines petty cash movement and approved payment vouchers. Positive amounts are inflows; voucher amounts and petty cash spending are outflows.</p>{% endif %}
   {% endif %}
 {% endif %}
 </div>

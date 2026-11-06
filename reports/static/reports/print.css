@@ -1,17 +1,22 @@
 @media print {
-  @page { size: A4 portrait; margin: 14mm 12mm 16mm; }
+  @page { size: A4 landscape; margin: 12mm 10mm 14mm; }
   .reports-print-document { background: #fff; color: #17202a; }
   .reports-print-document .report-heading { display: block; border-bottom: 2px solid #1f2933; padding-bottom: 7mm; margin-bottom: 9mm; }
   .reports-print-document .report-company { font-size: 18pt; font-weight: 700; }
   .reports-print-document .report-heading h2 { font-size: 15pt; margin: 3mm 0 1mm; }
   .reports-print-document .report-subtitle { color: #52606d; margin: 0 0 6mm; }
   .reports-print-document .report-meta { display: flex; flex-wrap: wrap; gap: 5mm 14mm; color: #17202a; font-size: 9pt; }
-  .reports-print-document .report-content { overflow: visible; border: 0; box-shadow: none; }
-  .reports-print-document table.data { font-size: 9pt; page-break-inside: auto; }
-  .reports-print-document table.data thead { display: table-header-group; }
-  .reports-print-document table.data tfoot { display: table-footer-group; }
-  .reports-print-document table.data tr { page-break-inside: avoid; page-break-after: auto; }
-  .reports-print-document table.data th { background: #eef1f4 !important; color: #17202a; border-bottom: 1px solid #1f2933; }
-  .reports-print-document table.data td { padding: 5pt 6pt; border-bottom: 1px solid #d9e2ec; }
+  .reports-print-document .report-content { overflow: visible !important; border: 0; box-shadow: none; max-width: none !important; }
+  .reports-print-document .table-wrap { overflow: visible !important; }
+  .reports-print-document table.data, .reports-print-document table.report-table { width: 100% !important; min-width: 0 !important; table-layout: fixed; font-size: 7.5pt; page-break-inside: auto; }
+  .reports-print-document table.data thead, .reports-print-document table.report-table thead { display: table-header-group; }
+  .reports-print-document table.data tfoot, .reports-print-document table.report-table tfoot { display: table-footer-group; }
+  .reports-print-document table.data tr, .reports-print-document table.report-table tr { page-break-inside: avoid; page-break-after: auto; }
+  .reports-print-document table.data th, .reports-print-document table.report-table th { background: #eef1f4 !important; color: #17202a; border-bottom: 1px solid #1f2933; white-space: normal !important; word-break: break-word; }
+  .reports-print-document table.data td, .reports-print-document table.report-table td { padding: 4pt 4pt; border-bottom: 1px solid #d9e2ec; white-space: normal !important; word-break: break-word; overflow-wrap: anywhere; }
+  .reports-print-document table.data td.nowrap, .reports-print-document table.report-table td.nowrap,
+  .reports-print-document table.data td.number, .reports-print-document table.report-table td.number { white-space: nowrap !important; word-break: normal; }
   .reports-print-document .empty { border: 0; box-shadow: none; }
+  .reports-print-document.report-payment_vouchers table { font-size: 6.8pt; }
+  .reports-print-document.report-payment_vouchers th, .reports-print-document.report-payment_vouchers td { padding: 3pt 3pt; }
 }

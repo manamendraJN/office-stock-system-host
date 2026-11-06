@@ -1,18 +1,31 @@
 {% extends "base_auth.html" %}
 {% load ui %}
 {% block content %}
-<div style="text-align:center;margin-bottom:2rem">
-  <div class="brand-mark">{% icon 'box' 'icon' %}</div>
-  <h1 style="font-size:1.5rem">Office Stock</h1>
-  <p class="muted small" style="margin:.25rem 0 0">Sign in to continue</p>
-</div>
-<form method="post" class="card card-body stack" novalidate>
+<form method="post" class="login-layout" novalidate>
   {% csrf_token %}
-  <input type="hidden" name="next" value="{{ next }}">
-  {% if form.non_field_errors %}<div class="alert alert-error" role="alert" style="margin:0">{{ form.non_field_errors|join:" " }}</div>{% endif %}
-  {% for m in messages %}<div class="alert alert-{{ m.tags|default:'info' }}" style="margin:0">{{ m }}</div>{% endfor %}
-  {% field form.email %}
-  {% field form.password %}
-  <button class="btn btn-block" type="submit">Sign in</button>
+  <section class="login-brand-panel" aria-label="Company branding">
+    {% if app_settings.company_logo %}<div class="auth-logo-frame auth-logo-align-{{ app_settings.login_logo_alignment }}" style="--login-logo-size:{{ app_settings.login_logo_size }}px;--login-logo-x:{{ app_settings.login_logo_offset_x }}px;--login-logo-y:{{ app_settings.login_logo_offset_y }}px"><img class="auth-logo" src="{% url 'core:company_logo' %}" alt="{{ app_settings.company_name }}"></div>{% else %}<div class="brand-mark">{% icon 'box' 'icon' %}</div>{% endif %}
+    {% if app_settings.show_company_name_login %}<h1>{{ app_settings.company_name|default:"Heritage Crops (Pvt) Ltd" }}</h1>{% endif %}
+    <p>Plantation &amp; Exports</p>
+  </section>
+  <section class="login-form-panel">
+    <div class="login-form-inner">
+      <input type="hidden" name="next" value="{{ next }}">
+      <div class="login-form-intro"><span>WELCOME BACK</span><h2>Sign in to your account</h2><p>Enter your credentials to access your workspace.</p></div>
+      {% if form.non_field_errors %}<div class="alert alert-error" role="alert" style="margin:0">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+      {% for m in messages %}<div class="alert alert-{{ m.tags|default:'info' }}" style="margin:0">{{ m }}</div>{% endfor %}
+      <div class="login-fields">
+        {% field form.email %}
+        <div class="field password-field">
+          <label class="lbl" for="{{ form.password.id_for_label }}">{{ form.password.label }}{% if form.password.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>
+          <div class="password-field-control">{{ form.password }}<button class="password-toggle" type="button" data-password-toggle aria-label="Show password" aria-pressed="false"><svg class="eye-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-5 9.5-5 9.5 5 9.5 5-3.5 5-9.5 5-9.5-5-9.5-5Z"></path><circle cx="12" cy="12" r="2.5"></circle></svg></button></div>
+          {% for e in form.password.errors %}<div class="err" role="alert">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
+      <div class="login-options"><label class="remember-option"><input type="checkbox" name="remember_me" value="1"> <span>Remember me</span></label></div>
+      <button class="btn btn-block login-submit" type="submit" data-login-submit><span class="login-submit-label">Sign in</span><span class="login-spinner" aria-hidden="true"></span></button>
+      <p class="login-help">Need access? Contact your administrator.</p>
+    </div>
+  </section>
 </form>
 {% endblock %}

@@ -23,7 +23,7 @@
 </div>
 <div class="shell">
   <aside class="sidebar" id="sidebar">
-    <div class="brand"><div class="brand-mark">{% icon 'box' %}</div><span class="brand-name">Office Stock</span></div>
+    <div class="brand brand-align-{{ app_settings.system_logo_alignment }}{% if not app_settings.show_company_name_system %} brand-name-hidden{% endif %}" style="--system-logo-size:{{ app_settings.system_logo_size }}px;--system-logo-x:{{ app_settings.system_logo_offset_x }}px;--system-logo-y:{{ app_settings.system_logo_offset_y }}px"><div class="brand-content">{% if app_settings.company_logo %}<span class="brand-logo-frame"><img class="brand-logo" src="{% url 'core:company_logo' %}" alt="{{ app_settings.company_name }}"></span>{% else %}<div class="brand-mark">{% icon 'box' %}</div>{% endif %}{% if app_settings.show_company_name_system %}<span class="brand-name">{{ app_settings.system_display_name }}</span>{% endif %}</div></div>
     <nav class="nav" aria-label="Main">
       {% for n in nav %}<a href="{{ n.href }}" class="{% if n.active %}active{% endif %}">{% icon n.icon %}{{ n.label }}</a>{% endfor %}
     </nav>

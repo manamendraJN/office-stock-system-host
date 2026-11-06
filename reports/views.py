@@ -21,8 +21,10 @@ def index(request):
     user = request.user
     g = request.GET
     branch_side = is_branch_side(user)
-    module_on = Setting.get().branch_module_enabled
-    tabs = {k: v for k, v in services.REPORTS.items() if module_on or not v.get('needs_branch_module')}
+    settings = Setting.get()
+    tabs = {k: v for k, v in services.REPORTS.items()
+            if (settings.branch_module_enabled or not v.get('needs_branch_module'))
+            and (settings.payment_voucher_module_enabled or not v.get('needs_voucher_module'))}
     rtype = g.get('type') if g.get('type') in tabs else 'balances'
     meta = tabs[rtype]
     today = timezone.localdate()
@@ -57,6 +59,16 @@ def index(request):
             branch = own_branch if branch_side else _int(g.get('branch'))
             result = services.petty_cash_report(rng, branch_id=branch, entry_type=g.get('entry_type', ''))
             scope = user.branch.name if branch_side else ('Selected branch' if branch else 'All branches')
+        elif rtype == 'payment_vouchers':
+            branch = own_branch if branch_side else _int(g.get('branch'))
+            result = services.payment_vouchers_report(rng, branch_id=branch, status=g.get('vstatus', ''),
+                                                      category_id=_int(g.get('category')), method=g.get('method', ''),
+                                                      schedule=g.get('schedule', ''))
+            scope = user.branch.name if branch_side else ('Selected branch' if branch else 'All branches')
+        elif rtype == 'money_flow':
+            branch = own_branch if branch_side else _int(g.get('branch'))
+            result = services.money_flow_report(rng, branch_id=branch)
+            scope = user.branch.name if branch_side else ('Selected branch' if branch else 'All branches')
         else:
             dest = own_branch if branch_side else _int(g.get('destination'))
             result = services.dispatches_report(rng, destination_id=dest)
@@ -79,7 +91,9 @@ def index(request):
     ctx = {
         'tabs': tabs, 'rtype': rtype, 'meta': meta, 'f': {'from': f, 'to': t, 'branch': g.get('branch', ''), 'low': g.get('low') == '1',
                'supplier': g.get('supplier', ''), 'by': g.get('by', ''), 'department': g.get('department', ''),
-               'destination': g.get('destination', ''), 'entry_type': g.get('entry_type', '')},
+               'destination': g.get('destination', ''), 'entry_type': g.get('entry_type', ''),
+               'vstatus': g.get('vstatus', ''), 'category': g.get('category', ''), 'method': g.get('method', ''),
+               'schedule': g.get('schedule', '')},
         'opts': opts, 'error': error, 'result': result, 'columns': columns, 'rows': rows, 'totals': totals,
         'total_cells': [{'col': c, 'first': i == 0, 'has': c['key'] in totals, 'value': totals.get(c['key'])} for i, c in enumerate(columns)],
         'scope': scope, 'period': period, 'quick': [('This month', *ranges['month']), ('Last month', *ranges['last_month']),

@@ -15,6 +15,7 @@ class Command(BaseCommand):
         from catalog.models import Category, Item, Supplier
         from core.models import AuditLog, Counter
         from inventory.models import OfficeIssue, Purchase, StockLedger
+        from vouchers.models import ExpenseCategory, Voucher, VoucherEvent, VoucherSchedule
 
         if not settings.DEBUG:
             raise CommandError('Data clearing is disabled unless DJANGO_DEBUG is on (it is off in production).')
@@ -32,6 +33,12 @@ class Command(BaseCommand):
         with transaction.atomic():
             # Documents that refer to catalog items go first. Dispatches point at requests, so they go before them.
             for model in (Dispatch, Request, Purchase, OfficeIssue):
+                n = model.objects.all().delete()[0]
+                self.stdout.write(f'{model._meta.label}: deleted {n}')
+            for model in (VoucherEvent,):
+                n = model.objects.all().unsafe_delete()
+                self.stdout.write(f'{model._meta.label}: deleted {n}')
+            for model in (Voucher, VoucherSchedule, ExpenseCategory):
                 n = model.objects.all().delete()[0]
                 self.stdout.write(f'{model._meta.label}: deleted {n}')
             # Append-only tables: this explicit clean-up is one of the deliberate exceptions.

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Payment vouchers{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Payment vouchers</h1><p>Payment requests, approvals and printable records</p></div>
+  <div class="form-actions">
+    {% if can_schedule %}<a class="btn btn-secondary" href="{% url 'vouchers:schedule_list' %}">Schedules</a>{% endif %}
+    {% if can_configure %}<a class="btn btn-secondary" href="{% url 'vouchers:category_list' %}">Categories &amp; budgets</a>{% endif %}
+    {% if can_create %}<a class="btn" href="{% url 'vouchers:voucher_create' %}">New voucher</a>{% endif %}
+  </div>
+</div>
+<form method="get" class="card" style="margin-bottom:1rem"><div class="filters">
+  <div class="field grow"><input type="search" id="id_q" name="q" value="{{ q }}" placeholder="Number, payee, purpose" aria-label="Search vouchers"></div>
+  <div class="field"><select id="id_status" name="status" aria-label="Status"><option value="">All statuses</option>{% for key,label in statuses %}<option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+  <button class="btn" type="submit">Filter</button><a class="btn btn-secondary" href="{% url 'vouchers:voucher_list' %}">Clear</a>
+</div></form>
+{% if vouchers %}<div class="card voucher-table-card table-wrap"><table class="data">
+    <thead><tr><th>Voucher</th><th>Payment date</th><th>Payee</th><th>Purpose</th><th>Amount</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for v in vouchers %}
+      <tr><td><a href="{% url 'vouchers:voucher_detail' v.pk %}"><strong>{{ v.number }}</strong></a><div class="small muted">{{ v.branch.name }}</div></td>
+        <td class="nowrap muted">{{ v.date|fdate }}</td><td>{{ v.payee }}</td><td>{{ v.being }}</td><td class="nowrap"><b>{{ v.amount|money }}</b></td>
+        <td>{% if v.status == 'approved' %}{% badge v.get_status_display 'green' %}{% elif v.status == 'rejected' %}{% badge v.get_status_display 'red' %}{% elif v.status == 'pending' or v.status == 'recommending' %}{% badge v.get_status_display 'amber' %}{% else %}{% badge v.get_status_display 'gray' %}{% endif %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table></div>{% else %}<div class="card empty"><h3>No payment vouchers found</h3><p>No payment vouchers match the current filters.</p></div>{% endif %}
+{% endblock %}

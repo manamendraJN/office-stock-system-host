@@ -98,6 +98,15 @@ class PermissionRuleTests(unittest.TestCase):
         self.assertIn('Audit Log', labels)
         self.assertNotIn('Requests', labels)
 
+    def test_voucher_recommendation_permission_is_separate_and_has_its_queue(self):
+        self.assertIn('vouchers.recommend', perm.ALL_PERMISSIONS)
+        self.assertEqual(perm.IMPLIES['vouchers.recommend'], ['vouchers.view'])
+        labels = [n['label'] for n in perm.visible_nav(
+            NS(role='x'), ['vouchers.recommend'], False, payment_voucher_module_enabled=True,
+        )]
+        self.assertIn('Voucher Recommendations', labels)
+        self.assertNotIn('Voucher Approvals', labels)
+
 
 class AdminRuleTests(unittest.TestCase):
     def test_last_admin(self):

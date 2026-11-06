@@ -8,6 +8,7 @@
   document.addEventListener('click', function (e) {
     if (e.target.closest('[data-nav-open]')) document.body.classList.add('nav-open');
     if (e.target.closest('[data-nav-close]')) document.body.classList.remove('nav-open');
+    if (e.target.closest('[data-print]')) window.print();
   });
 
   // ---- audit log controls

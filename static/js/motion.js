@@ -35,7 +35,7 @@
 
   // ---- reveal on scroll
   function show(el) {
-    if (el.classList.contains('in')) return;
+    if (!el || el.classList.contains('hero') || el.classList.contains('in')) return;
     el.classList.add('in');
     $$('.value', el).forEach(countUp);
   }
@@ -80,7 +80,7 @@
     layers.forEach(function (l) {
       // tanh keeps the drift gentle however far the page is scrolled
       var v = 150 * Math.tanh((y * l.speed) / 150);
-      l.el.style.translate = '0 ' + v.toFixed(1) + 'px';
+      if (Math.abs(v) > 0.05 || l.applied) { l.el.style.translate = '0 ' + v.toFixed(1) + 'px'; l.applied = 1; }
     });
     if (bar) {
       var max = document.documentElement.scrollHeight - window.innerHeight;

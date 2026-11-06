@@ -48,11 +48,30 @@ _SETTING_CACHE = contextvars.ContextVar('setting_cache', default=None)
 
 class Setting(models.Model):
     """The single settings row (key 'app')."""
+    class LogoAlignment(models.TextChoices):
+        LEFT = 'left', 'Left'
+        CENTER = 'center', 'Center'
+        RIGHT = 'right', 'Right'
+
     key = models.CharField(max_length=20, default='app', unique=True)
     branch_module_enabled = models.BooleanField(default=False)
+    payment_voucher_module_enabled = models.BooleanField(default=False)
+    payment_voucher_self_approval_enabled = models.BooleanField(default=False)
     audit_logging_enabled = models.BooleanField(default=True)
     stock_retention_lock_until = models.DateTimeField(null=True, blank=True)
     company_name = models.CharField(max_length=120, default='Our Company')
+    system_display_name = models.CharField(max_length=120, default='Office Stock')
+    company_logo = models.FileField(upload_to='company/', blank=True, default='')
+    show_company_name_login = models.BooleanField(default=True)
+    show_company_name_system = models.BooleanField(default=True)
+    login_logo_size = models.PositiveIntegerField(default=128)
+    login_logo_offset_x = models.IntegerField(default=0)
+    login_logo_offset_y = models.IntegerField(default=0)
+    login_logo_alignment = models.CharField(max_length=10, choices=LogoAlignment.choices, default=LogoAlignment.CENTER)
+    system_logo_size = models.PositiveIntegerField(default=32)
+    system_logo_offset_x = models.IntegerField(default=0)
+    system_logo_offset_y = models.IntegerField(default=0)
+    system_logo_alignment = models.CharField(max_length=10, choices=LogoAlignment.choices, default=LogoAlignment.CENTER)
     # Petty cash at or below this amount is flagged as low (Rs.). Changed by users who may configure petty cash.
     petty_cash_low_level = models.DecimalField(max_digits=12, decimal_places=2, default=2000)
     # Set once the default roles have been created, so deleted roles are never re-created.
