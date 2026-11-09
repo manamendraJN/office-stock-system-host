@@ -57,7 +57,7 @@ Then re-upload the logo in **Settings → Company logo** (the old file was most 
 [PC] Save as `C:\MyBackups\pull-backup.ps1` (adjust the key path and IP):
 
 ```powershell
-$key  = "C:\Users\navod\Downloads\ssh-key-2026-10-27.key"
+$key  = "D:\Office Works\Heritage_Crops\Office_Stock\OCI\ssh-key-2026-10-27.key"
 $srv  = "ubuntu@130.210.8.169"
 $dest = "C:\MyBackups\pull"
 New-Item -ItemType Directory -Force $dest | Out-Null

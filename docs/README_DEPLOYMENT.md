@@ -8,7 +8,7 @@ Never run `docker compose down -v` or `docker volume prune`.
 
 ## 1. Connect to OCI via SSH (PS)
 ```powershell
-cd C:\Users\navod\Downloads
+cd "D:\Office Works\Heritage_Crops\Office_Stock\OCI"
 ssh -i .\ssh-key-2026-10-27.key ubuntu@130.210.8.169
 ```
 
@@ -54,16 +54,16 @@ docker compose exec -T web sh -c 'tar -C /srv/app/data -czf /srv/app/backups/med
 ## 7. Download the backup to your Windows PC (PS)
 Find the newest backup name:
 ```powershell
-ssh -i C:\Users\navod\Downloads\ssh-key-2026-10-27.key ubuntu@130.210.8.169 "ls -t ~/inventory-system/backups/db_backup_*.gz | head -1"
+ssh -i "D:\Office Works\Heritage_Crops\Office_Stock\OCI\ssh-key-2026-10-27.key" ubuntu@130.210.8.169 "ls -t ~/inventory-system/backups/db_backup_*.gz | head -1"
 ```
 Download it:
 ```powershell
 mkdir C:\MyBackups\migrate -Force
-scp -i C:\Users\navod\Downloads\ssh-key-2026-10-27.key ubuntu@130.210.8.169:~/inventory-system/backups/BACKUP_FILE C:\MyBackups\migrate\
+scp -i "D:\Office Works\Heritage_Crops\Office_Stock\OCI\ssh-key-2026-10-27.key" ubuntu@130.210.8.169:~/inventory-system/backups/BACKUP_FILE C:\MyBackups\migrate\
 ```
 Download every backup and the logo archive:
 ```powershell
-scp -i C:\Users\navod\Downloads\ssh-key-2026-10-27.key "ubuntu@130.210.8.169:~/inventory-system/backups/*.gz" C:\MyBackups\migrate\
+scp -i "D:\Office Works\Heritage_Crops\Office_Stock\OCI\ssh-key-2026-10-27.key" "ubuntu@130.210.8.169:~/inventory-system/backups/*.gz" C:\MyBackups\migrate\
 ```
 
 ## 8. Verify the local backup (PS)
@@ -173,7 +173,7 @@ docker compose exec -T web tar -C /srv/app/data -xzf /srv/app/backups/media_late
 
 ### 17a. Upload a backup from your PC to the server first (PS)
 ```powershell
-scp -i C:\Users\navod\Downloads\ssh-key-2026-10-27.key C:\MyBackups\migrate\BACKUP_FILE ubuntu@130.210.8.169:~/inventory-system/backups/
+scp -i "D:\Office Works\Heritage_Crops\Office_Stock\OCI\ssh-key-2026-10-27.key" C:\MyBackups\migrate\BACKUP_FILE ubuntu@130.210.8.169:~/inventory-system/backups/
 ```
 
 ## 18. Clean up old backups safely
