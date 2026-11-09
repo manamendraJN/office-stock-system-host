@@ -202,3 +202,13 @@ table.data td.strong { font-weight: 500; color: var(--s900); }
   body { background: #fff; }
   .card { box-shadow: none; }
 }
+
+/* Searchable item picker (progressive enhancement over the line-item <select>; see app.js) */
+.combo { position: relative; }
+.combo-native { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.combo-list { position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: .25rem; list-style: none;
+  max-height: 16rem; overflow-y: auto; background: #fff; border: 1px solid var(--s200); border-radius: 8px; box-shadow: 0 8px 24px rgba(15,23,42,.14); }
+.combo-list li { padding: .5rem .625rem; border-radius: 6px; font-size: .875rem; color: var(--s800); cursor: pointer; }
+.combo-list li.active { background: var(--brand-50); color: var(--brand-700); }
+.combo-list li[aria-selected=true] { font-weight: 600; }
+.combo-list li.combo-empty { color: var(--s500); cursor: default; }

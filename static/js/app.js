@@ -154,8 +154,75 @@
       if (totalEl) totalEl.textContent = money(total);
       if (unitsEl) unitsEl.textContent = String(units);
     }
+    // Type-to-search box over the item <select>. The select stays in the form (hidden) and remains the source of
+    // truth, so the post is unchanged and, without JS, the plain dropdown still works.
+    function searchable(sel) {
+      var wrapEl = document.createElement('div'); wrapEl.className = 'combo';
+      var input = document.createElement('input');
+      input.type = 'text'; input.className = 'combo-input' + (sel.classList.contains('invalid') ? ' invalid' : '');
+      input.placeholder = 'Search item name or code…'; input.autocomplete = 'off'; input.spellcheck = false;
+      input.setAttribute('role', 'combobox'); input.setAttribute('aria-autocomplete', 'list');
+      input.setAttribute('aria-expanded', 'false'); input.setAttribute('aria-label', 'Item');
+      var list = document.createElement('ul'); list.className = 'combo-list'; list.setAttribute('role', 'listbox'); list.hidden = true;
+      sel.parentNode.insertBefore(wrapEl, sel);
+      wrapEl.appendChild(input); wrapEl.appendChild(list); wrapEl.appendChild(sel);
+      sel.classList.add('combo-native'); sel.tabIndex = -1; sel.setAttribute('aria-hidden', 'true');
+
+      var active = -1, shown = [];
+      // Search on name + code only; the label's "· n in stock" suffix is display text, not something to match.
+      function key(o) { return o.textContent.split(' · ')[0].toLowerCase(); }
+      function label(o) { return o.textContent; }
+      function current() { var o = sel.selectedOptions[0]; return o && o.value ? label(o) : ''; }
+      function render(q) {
+        var words = q.toLowerCase().split(/\s+/).filter(Boolean);
+        shown = Array.prototype.filter.call(sel.options, function (o) {
+          if (!o.value) return false;
+          var k = key(o); return words.every(function (w) { return k.indexOf(w) !== -1; });
+        });
+        list.innerHTML = '';
+        shown.forEach(function (o, i) {
+          var li = document.createElement('li'); li.setAttribute('role', 'option'); li.textContent = label(o);
+          li.setAttribute('data-i', i); if (o.selected) li.setAttribute('aria-selected', 'true'); list.appendChild(li);
+        });
+        if (!shown.length) { var none = document.createElement('li'); none.className = 'combo-empty'; none.textContent = 'No matching items'; list.appendChild(none); }
+        setActive(shown.length ? 0 : -1);
+      }
+      function setActive(i) {
+        active = i;
+        Array.prototype.forEach.call(list.children, function (li, n) { li.classList.toggle('active', n === i && !li.classList.contains('combo-empty')); });
+        var li = list.children[i]; if (li && li.scrollIntoView) li.scrollIntoView({ block: 'nearest' });
+      }
+      function open() { if (list.hidden) { list.hidden = false; input.setAttribute('aria-expanded', 'true'); } }
+      function close() { list.hidden = true; input.setAttribute('aria-expanded', 'false'); input.value = current(); }
+      function choose(o) {
+        sel.value = o.value; input.value = label(o); list.hidden = true; input.setAttribute('aria-expanded', 'false');
+        input.classList.remove('invalid'); sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      input.addEventListener('focus', function () { input.select(); render(''); open(); });
+      input.addEventListener('input', function () { render(input.value); open(); });
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault(); if (list.hidden) { render(input.value); open(); return; }
+          if (shown.length) setActive((active + (e.key === 'ArrowDown' ? 1 : -1) + shown.length) % shown.length);
+        } else if (e.key === 'Enter') {
+          if (!list.hidden) { e.preventDefault(); if (shown[active]) choose(shown[active]); }   // never submit the form from here
+        } else if (e.key === 'Escape') { if (!list.hidden) { e.preventDefault(); close(); } }
+      });
+      // mousedown (not click) so it lands before the input's blur closes the list
+      list.addEventListener('mousedown', function (e) {
+        var li = e.target.closest('li[data-i]'); e.preventDefault(); if (li) choose(shown[+li.getAttribute('data-i')]);
+      });
+      input.addEventListener('blur', function () {
+        // Emptying the box clears the choice, so a stale selection can't be submitted by accident.
+        if (!input.value.trim() && sel.value) { sel.value = ''; sel.dispatchEvent(new Event('change', { bubbles: true })); }
+        close();
+      });
+      input.value = current();
+    }
+
     function wire(row) {
-      var sel = $('[name=line_item]', row), unit = $('[data-unit]', row);
+      var sel = $('[name=line_item]', row), unit = $('div[data-unit]', row); // div only: the <option>s also carry data-unit
+      searchable(sel);
       var show = function () {
         var o = sel.selectedOptions[0];
         if (unit) unit.textContent = o && o.value ? (o.getAttribute('data-unit') || '') : '';
