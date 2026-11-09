@@ -11,6 +11,27 @@
 Labels: **[PC]** PowerShell on your Windows computer · **[SERVER]** SSH session on Ubuntu · **[CONSOLE]** OCI website.
 Things marked ✅ were checked against this repository. Things marked ⚠ depend on your live server or Oracle's current rules.
 
+## Connect to OCI (used by every step below)
+
+**[PC]**
+```powershell
+cd "D:\Office Works\Heritage_Crops\Office_Stock\OCI"
+ssh -i .\ssh-key-2026-10-27.key ubuntu@130.210.8.169
+```
+**[SERVER]**
+```bash
+cd ~/inventory-system
+```
+If SSH says `Bad permissions` / `UNPROTECTED PRIVATE KEY FILE` (happens after moving or copying the key), **[PC]**:
+```powershell
+cd "D:\Office Works\Heritage_Crops\Office_Stock\OCI"
+icacls.exe .\ssh-key-2026-10-27.key /inheritance:r
+icacls.exe .\ssh-key-2026-10-27.key /grant:r "$($env:USERNAME):(R)"
+icacls.exe .\ssh-key-2026-10-27.key /remove "NT AUTHORITY\Authenticated Users" /remove "BUILTIN\Users"
+icacls.exe .\ssh-key-2026-10-27.key
+```
+The last command should list only your user, Administrators and SYSTEM. After a rebuild on a new instance, replace the IP (and the key file name if you created a new key pair).
+
 ---
 
 ## 1. What must be protected

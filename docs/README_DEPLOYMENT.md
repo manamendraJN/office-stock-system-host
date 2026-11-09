@@ -12,6 +12,17 @@ cd "D:\Office Works\Heritage_Crops\Office_Stock\OCI"
 ssh -i .\ssh-key-2026-10-27.key ubuntu@130.210.8.169
 ```
 
+### 1a. Fix "Bad permissions / UNPROTECTED PRIVATE KEY FILE" (PS)
+Run after moving or copying the key to a new folder:
+```powershell
+cd "D:\Office Works\Heritage_Crops\Office_Stock\OCI"
+icacls.exe .\ssh-key-2026-10-27.key /inheritance:r
+icacls.exe .\ssh-key-2026-10-27.key /grant:r "$($env:USERNAME):(R)"
+icacls.exe .\ssh-key-2026-10-27.key /remove "NT AUTHORITY\Authenticated Users" /remove "BUILTIN\Users"
+icacls.exe .\ssh-key-2026-10-27.key
+```
+The last command should list only your user, Administrators and SYSTEM.
+
 ## 2. Check current directory and go to the project (SRV)
 ```bash
 pwd
