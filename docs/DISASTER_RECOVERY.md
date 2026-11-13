@@ -38,7 +38,7 @@ The last command should list only your user, Administrators and SYSTEM. After a 
 
 | Asset | Where it lives | Protected today? | Action |
 |---|---|---|---|
-| Database (all stock, purchases, users) | SQLite in Docker volume `app_data` → `/srv/app/data/db.sqlite3` ✅ | Yes, by `backup_db` into `~/inventory-system/backups` | Copy off the server (Section 3) |
+| Database (all stock, purchases, users) | SQLite in Docker volume `app_data` → `/srv/app/data/db.sqlite3` ✅ | Yes: automatic backup every 6 h (Step 2) | Copy off the server (Steps 3–4) |
 | **Company logo upload** | `/srv/app/media/company/` **inside the container** ✅ | **No.** Not in a volume and not in the DB backup. Lost on every `docker compose up -d --build`. | **Fix first (Section 2, step 1)** |
 | `.env` (secret key, admin password) | Server only; git-ignored ✅ | No | Encrypted copy on your PC |
 | Application code | GitHub | Yes | Keep `main` pushed |
@@ -61,18 +61,44 @@ docker compose up -d
 
 Then re-upload the logo in **Settings → Company logo** (the old file was most likely lost when the container was last rebuilt). It now sits in the `app_data` volume, which survives rebuilds.
 
-### Step 2 — Schedule backups every 6 hours
-[SERVER] `crontab -e`, then add:
+### Step 2 — Automatic 6-hourly backup (already running; this is how it fits recovery)
+Seen working on the live server (installed 27 Oct 2026, last run checked 13 Nov 06:00 UTC).
 
+| Piece | Location | Role in recovery |
+|---|---|---|
+| Schedule | `/var/spool/cron/crontabs/ubuntu` on the server only (edit with `crontab -e`). Not in GitHub, so it must be re-created after a rebuild. | Starts the backup every 6 h (00, 06, 12, 18 UTC = 05:30, 11:30, 17:30, 23:30 Colombo) |
+| Script | `scripts/backup.sh` ✅ (in GitHub) | Runs `docker compose exec -T web python manage.py backup_db --dest /srv/app/backups --keep-days 30` |
+| Backup code | `core/management/commands/backup_db.py` ✅ (in GitHub) | Makes a safe, compressed copy of the SQLite database |
+| Output | `~/inventory-system/backups/db_backup_YYYYMMDD_HHMMSS.sqlite3.gz` (name is Colombo time) | **The file every recovery in Sections 4 and 5 starts from** |
+| Log | `~/inventory-system/backups/backup.log` | Proof each run succeeded |
+| Restore code | `core/management/commands/restore_db.py` ✅ | Puts a backup file back |
+
+The existing cron line:
 ```cron
-0 */6 * * * cd /home/ubuntu/inventory-system && ./scripts/backup.sh >> backups/backup.log 2>&1
+0 */6 * * * /home/ubuntu/inventory-system/scripts/backup.sh >> /home/ubuntu/inventory-system/backups/backup.log 2>&1
+```
+
+**Your retention choice:** each run deletes the previous backup, so the server holds **one** backup, at most 6 hours old. The recovery plan therefore depends on the PC/OneDrive copies (Steps 3–4) for anything older. Do not rely on the server alone.
+
+**Keep the repo in step with the server.** The server prints `Deleted old backup: …`, which the repo's `backup_db.py` does not (the repo keeps 30 days). Before any rebuild, save the server's version so the same behaviour comes back:
+```bash
+cd ~/inventory-system
+git diff core/management/commands/backup_db.py scripts/backup.sh
+```
+Commit those changes to GitHub, or accept the 30-day default after a rebuild.
+
+**Add the logo archive** to the same crontab (only after Step 1), through `crontab -e`:
+```cron
 5 */6 * * * cd /home/ubuntu/inventory-system && docker compose exec -T web sh -c 'tar -C /srv/app/data -czf /srv/app/backups/media_latest.tar.gz media' >> backups/backup.log 2>&1
 ```
 
-- The first line uses the project's `backup_db` command (SQLite online-backup API, safe while the app is running ✅). It keeps 30 days and deletes older files itself.
-- The second line archives the logo folder; the file is overwritten each time (a few KB).
-- Check: `crontab -l`, and after 6 h `ls -lh ~/inventory-system/backups`. The server clock is UTC (Colombo is +5:30).
-- `./backups` is owned by UID 10001 (the app user) ✅. Do not change its ownership.
+**Check it any time:**
+```bash
+crontab -l
+ls -lt ~/inventory-system/backups
+tail -5 ~/inventory-system/backups/backup.log
+```
+`./backups` is owned by UID 10001 (the app user) ✅. Do not change its ownership.
 
 ### Step 3 — Pull backups to your PC every day (off-server copy #1)
 [PC] Save as `C:\MyBackups\pull-backup.ps1` (adjust the key path and IP):
@@ -144,7 +170,7 @@ Always run `./scripts/backup.sh` **before** every deploy.
 ```bash
 cd ~/inventory-system
 ./scripts/backup.sh                    # keep the current state first, even if it is bad
-ls -lt backups | head                  # choose the backup from BEFORE the problem
+ls -lt backups | head                  # the server keeps only the newest backup; for an older one use your PC copy (Step 3, upload it with scp)
 docker compose exec web python manage.py restore_db --file /srv/app/backups/db_backup_YYYYMMDD_HHMMSS.sqlite3.gz
 docker compose exec -T web python manage.py shell -c "from catalog.models import Item; print(Item.objects.count())"
 ```
@@ -177,7 +203,7 @@ Use this for scenarios 4 and 5. Have ready: the latest `.gz` from `C:\MyBackups\
 7. **[SERVER]** `docker compose up -d --build`, wait about 60 s, check `docker compose ps` is `healthy`.
 8. **[SERVER]** Restore as in 4.3, and the logo with the `tar -xzf` line there.
 9. **[SERVER]** Verify: `curl -s -o /dev/null -w "%{http_code}\n" http://localhost/login/` returns 200; log in with an **old** account; check items, stock and a recent purchase.
-10. Point DNS (A record) at the new IP; Caddy will fetch a new certificate itself. Re-create the cron lines from Step 2, and update the IP in `pull-backup.ps1`.
+10. Point DNS (A record) at the new IP; Caddy will fetch a new certificate itself. Re-create the cron line from Step 2 with `crontab -e`, and update the IP in `pull-backup.ps1`.
 
 ---
 
@@ -203,4 +229,5 @@ Use this for scenarios 4 and 5. Have ready: the latest `.gz` from `C:\MyBackups\
 
 - `backup_db` → `restore_db` round trip, run locally on a copy of your database: the backup was 46 KB; after deleting every item (44 → 0), the restore returned 44 items and `integrity_check` returned `ok`.
 - Confirmed in the code: `restore_db` takes `--file` and `--yes`; `backup_db` takes `--dest` and `--keep-days` (default 30); the app runs as UID 10001; the SQLite database is at `/srv/app/data/db.sqlite3` in volume `app_data`; the company logo is saved to `MEDIA_ROOT` (default `/srv/app/media`, not a volume).
+- Seen in your server output: the cron line, a successful run on 13 Nov, and one-backup retention. The repo code and the server differ on retention (Step 2).
 - Not tested here: the cron entries, the Task Scheduler job, anything on the live OCI server or Oracle's current free-tier limits.
