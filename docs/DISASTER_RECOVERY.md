@@ -95,7 +95,7 @@ $key  = "D:\Office Works\Heritage_Crops\Office_Stock\OCI\ssh-key-2026-10-27.key"
 $srv  = "ubuntu@130.210.8.169"
 $dest = "C:\MyBackups\pull"
 New-Item -ItemType Directory -Force $dest | Out-Null
-scp -i $key "${srv}:~/inventory-system/backups/*.gz" $dest\
+scp -i $key "${srv}:~/inventory-system/backups/*.gz" "$dest"
 if ($LASTEXITCODE -ne 0) { Write-Host "BACKUP PULL FAILED"; exit 1 }
 # keep 60 days locally
 Get-ChildItem $dest -Filter db_backup_*.gz | Where-Object LastWriteTime -lt (Get-Date).AddDays(-60) | Remove-Item
