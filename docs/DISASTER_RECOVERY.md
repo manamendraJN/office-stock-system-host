@@ -39,7 +39,7 @@ The last command should list only your user, Administrators and SYSTEM. After a 
 | Asset | Where it lives | Protected today? | Action |
 |---|---|---|---|
 | Database (all stock, purchases, users) | SQLite in Docker volume `app_data` → `/srv/app/data/db.sqlite3` ✅ | Yes: automatic backup every 6 h (Step 2) | Copy off the server (Steps 3–4) |
-| **Company logo upload** | `/srv/app/media/company/` **inside the container** ✅ | **No.** Not in a volume and not in the DB backup. Lost on every `docker compose up -d --build`. | **Fix first (Section 2, step 1)** |
+| Company logo upload | `/srv/app/media/company/` inside the container ✅ | **No, by choice (Step 1).** Not in the DB backup. Lost on every rebuild (`up -d --build`). | Re-upload in Settings → Company logo after any rebuild |
 | `.env` (secret key, admin password) | Server only; git-ignored ✅ | No | Encrypted copy on your PC |
 | Application code | GitHub | Yes | Keep `main` pushed |
 | TLS certificate | Docker volume `caddy_data` | Not needed | Caddy re-issues automatically |
@@ -50,16 +50,8 @@ The last command should list only your user, Administrators and SYSTEM. After a 
 
 ## 2. One-time setup
 
-### Step 1 — Put the logo inside the database volume (do this first)
-[SERVER] Add one line to `.env` (no code change needed, `MEDIA_ROOT` is already read by `config/settings.py`):
-
-```bash
-cd ~/inventory-system
-echo 'MEDIA_ROOT=/srv/app/data/media' >> .env
-docker compose up -d
-```
-
-Then re-upload the logo in **Settings → Company logo** (the old file was most likely lost when the container was last rebuilt). It now sits in the `app_data` volume, which survives rebuilds.
+### Step 1 — Company logo (not backed up; re-upload after a rebuild)
+The logo is not part of the database backup and is not archived. After any rebuild or new server, re-upload it in **Settings → Company logo**. Nothing else is needed.
 
 ### Step 2 — Automatic 6-hourly backup (already running; this is how it fits recovery)
 Seen working on the live server (installed 27 Oct 2026, last run checked 13 Nov 06:00 UTC).
@@ -86,11 +78,6 @@ cd ~/inventory-system
 git diff core/management/commands/backup_db.py scripts/backup.sh
 ```
 Commit those changes to GitHub, or accept the 30-day default after a rebuild.
-
-**Add the logo archive** to the same crontab (only after Step 1), through `crontab -e`:
-```cron
-5 */6 * * * cd /home/ubuntu/inventory-system && docker compose exec -T web sh -c 'tar -C /srv/app/data -czf /srv/app/backups/media_latest.tar.gz media' >> backups/backup.log 2>&1
-```
 
 **Check it any time:**
 ```bash
@@ -174,7 +161,7 @@ ls -lt backups | head                  # the server keeps only the newest backup
 docker compose exec web python manage.py restore_db --file /srv/app/backups/db_backup_YYYYMMDD_HHMMSS.sqlite3.gz
 docker compose exec -T web python manage.py shell -c "from catalog.models import Item; print(Item.objects.count())"
 ```
-`restore_db` exists and asks for confirmation (`--yes` skips it) ✅. It overwrites the whole database, so users lose everything entered after that backup. Verify counts and open a few screens afterwards. Logo: `docker compose exec -T web tar -C /srv/app/data -xzf /srv/app/backups/media_latest.tar.gz`.
+`restore_db` exists and asks for confirmation (`--yes` skips it) ✅. It overwrites the whole database, so users lose everything entered after that backup. Verify counts and open a few screens afterwards.
 
 ⚠ **Never** run `docker compose down -v` or `docker volume prune`: they delete the database volume.
 
@@ -182,7 +169,7 @@ docker compose exec -T web python manage.py shell -c "from catalog.models import
 
 ## 5. Rebuild on a new Always Free instance
 
-Use this for scenarios 4 and 5. Have ready: the latest `.gz` from `C:\MyBackups\pull`, `media_latest.tar.gz`, the saved `.env`, and the SSH key.
+Use this for scenarios 4 and 5. Have ready: the latest `.gz` from `C:\MyBackups\pull`, the saved `.env`, and the SSH key.
 
 1. **[CONSOLE]** Create an instance: Ubuntu 22.04/24.04, **a shape labelled "Always Free-eligible"**, public IPv4, default boot volume (~47–50 GB). Open TCP 80 and 443 in the subnet's Security List.
    - Prefer **AMD Micro (1 GB)** for a simple rebuild; add the 2 GB swap from runbook B5. ⚠ A1 (Arm) capacity is sometimes unavailable ("out of host capacity"). If that happens, retry later or use Micro.
@@ -192,16 +179,16 @@ Use this for scenarios 4 and 5. Have ready: the latest `.gz` from `C:\MyBackups\
    ```bash
    cd ~ && git clone https://github.com/manamendraJN/office-stock-system-host.git inventory-system && cd inventory-system
    ```
-4. **[PC → SERVER]** Create `.env`: take the saved copy and change `DJANGO_ALLOWED_HOSTS`/`DJANGO_CSRF_TRUSTED_ORIGINS` for the new IP or domain. A new `DJANGO_SECRET_KEY` is fine; it only logs users out. Keep `MEDIA_ROOT=/srv/app/data/media`.
+4. **[PC → SERVER]** Create `.env`: take the saved copy and change `DJANGO_ALLOWED_HOSTS`/`DJANGO_CSRF_TRUSTED_ORIGINS` for the new IP or domain. A new `DJANGO_SECRET_KEY` is fine; it only logs users out.
 5. **[SERVER]** Prepare permissions (UID 10001 ✅; volume `inventory-system_app_data` ✅):
    ```bash
    docker volume create inventory-system_app_data
    docker run --rm -v inventory-system_app_data:/data alpine chown -R 10001:10001 /data
    mkdir -p backups && sudo chown -R 10001:10001 backups && chmod +x scripts/backup.sh
    ```
-6. **[PC]** Upload the backups: `scp -i KEY db_backup_….sqlite3.gz media_latest.tar.gz ubuntu@NEW_IP:~/inventory-system/backups/`
+6. **[PC]** Upload the backups: `scp -i KEY db_backup_….sqlite3.gz ubuntu@NEW_IP:~/inventory-system/backups/`
 7. **[SERVER]** `docker compose up -d --build`, wait about 60 s, check `docker compose ps` is `healthy`.
-8. **[SERVER]** Restore as in 4.3, and the logo with the `tar -xzf` line there.
+8. **[SERVER]** Restore as in 4.3, then re-upload the logo in Settings → Company logo.
 9. **[SERVER]** Verify: `curl -s -o /dev/null -w "%{http_code}\n" http://localhost/login/` returns 200; log in with an **old** account; check items, stock and a recent purchase.
 10. Point DNS (A record) at the new IP; Caddy will fetch a new certificate itself. Re-create the cron line from Step 2 with `crontab -e`, and update the IP in `pull-backup.ps1`.
 
@@ -217,7 +204,7 @@ Use this for scenarios 4 and 5. Have ready: the latest `.gz` from `C:\MyBackups\
 
 ## 7. Monthly checklist (10 minutes)
 
-- [ ] `ls -lh ~/inventory-system/backups`: files from the last 6 h exist; `media_latest.tar.gz` is recent.
+- [ ] `ls -lh ~/inventory-system/backups`: a `db_backup_…` file from the last 6 h exists.
 - [ ] `C:\MyBackups\pull` has yesterday's files; the OneDrive/USB copy is current.
 - [ ] Open the newest `.gz`'s database in DB Browser for SQLite, or run `restore_db` on your PC, and confirm the item count.
 - [ ] `docker compose ps` healthy; `df -h /` has space; `free -h` OK.
@@ -228,6 +215,6 @@ Use this for scenarios 4 and 5. Have ready: the latest `.gz` from `C:\MyBackups\
 ## 8. Verification notes (what was actually tested)
 
 - `backup_db` → `restore_db` round trip, run locally on a copy of your database: the backup was 46 KB; after deleting every item (44 → 0), the restore returned 44 items and `integrity_check` returned `ok`.
-- Confirmed in the code: `restore_db` takes `--file` and `--yes`; `backup_db` takes `--dest` and `--keep-days` (default 30); the app runs as UID 10001; the SQLite database is at `/srv/app/data/db.sqlite3` in volume `app_data`; the company logo is saved to `MEDIA_ROOT` (default `/srv/app/media`, not a volume).
+- Confirmed in the code: `restore_db` takes `--file` and `--yes`; `backup_db` takes `--dest` and `--keep-days` (default 30); the app runs as UID 10001; the SQLite database is at `/srv/app/data/db.sqlite3` in volume `app_data`; the company logo is saved to `MEDIA_ROOT` (default `/srv/app/media`, not a volume, and not backed up).
 - Seen in your server output: the cron line, a successful run on 13 Nov, and one-backup retention. The repo code and the server differ on retention (Step 2).
 - Not tested here: the cron entries, the Task Scheduler job, anything on the live OCI server or Oracle's current free-tier limits.

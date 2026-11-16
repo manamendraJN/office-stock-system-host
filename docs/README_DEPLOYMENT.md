@@ -48,7 +48,7 @@ docker system df
 
 ## 5. Verify environment configuration (SRV)
 ```bash
-grep -E '^(DOMAIN_NAME|DJANGO_ALLOWED_HOSTS|DJANGO_CSRF_TRUSTED_ORIGINS|DJANGO_DEBUG|DB_ENGINE|DB_PATH|MEDIA_ROOT)=' .env
+grep -E '^(DOMAIN_NAME|DJANGO_ALLOWED_HOSTS|DJANGO_CSRF_TRUSTED_ORIGINS|DJANGO_DEBUG|DB_ENGINE|DB_PATH)=' .env
 awk -F= '/^DJANGO_SECRET_KEY=/{print "secret key length:", length($2)}' .env
 ```
 
@@ -56,10 +56,6 @@ awk -F= '/^DJANGO_SECRET_KEY=/{print "secret key length:", length($2)}' .env
 ```bash
 ./scripts/backup.sh
 ls -lt backups | head -5
-```
-Logo/media archive:
-```bash
-docker compose exec -T web sh -c 'tar -C /srv/app/data -czf /srv/app/backups/media_latest.tar.gz media'
 ```
 
 ## 7. Download the backup to your Windows PC (PS)
@@ -72,7 +68,7 @@ Download it:
 mkdir C:\MyBackups\migrate -Force
 scp -i "D:\Office Works\Heritage_Crops\Office_Stock\OCI\ssh-key-2026-10-27.key" ubuntu@130.210.8.169:~/inventory-system/backups/BACKUP_FILE C:\MyBackups\migrate\
 ```
-Download every backup and the logo archive:
+Download every backup:
 ```powershell
 scp -i "D:\Office Works\Heritage_Crops\Office_Stock\OCI\ssh-key-2026-10-27.key" "ubuntu@130.210.8.169:~/inventory-system/backups/*.gz" C:\MyBackups\migrate\
 ```
@@ -177,10 +173,7 @@ Verify:
 docker compose exec -T web python -c "import sqlite3; print(sqlite3.connect('/srv/app/data/db.sqlite3').execute('pragma integrity_check').fetchone())"
 docker compose restart web
 ```
-Restore the logo, if needed:
-```bash
-docker compose exec -T web tar -C /srv/app/data -xzf /srv/app/backups/media_latest.tar.gz
-```
+The company logo is not backed up. Re-upload it in Settings → Company logo.
 
 ### 17a. Upload a backup from your PC to the server first (PS)
 ```powershell
