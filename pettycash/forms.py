@@ -40,6 +40,8 @@ class ExpenseForm(forms.Form):
     amount = _amount('Amount spent (Rs.)')
     description = forms.CharField(label='What was bought?', max_length=300,
                                   error_messages={'required': 'Say what the money was spent on', 'max_length': 'Use 300 characters or fewer'})
+    bill_number = forms.CharField(label='Bill number', required=False, max_length=100,
+                                  error_messages={'max_length': 'Use 100 characters or fewer'})
     entry_date = forms.DateField(label='Date', required=False, widget=DateInput(), error_messages={'invalid': 'Enter a real date'})
 
 

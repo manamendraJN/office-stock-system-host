@@ -97,6 +97,7 @@ def petty_cash_report(rng, *, branch_id=None, entry_type=''):
     rows = [{
         'date': entry.entry_date.strftime('%Y-%m-%d'),
         'branch': entry.branch.name,
+        'bill_number': entry.bill_number or '—',
         'description': entry.description or '—',
         'type': PETTY_CASH_ENTRY_LABELS.get(entry.type, {}).get('label', entry.type),
         'amount': entry.amount,
@@ -105,6 +106,7 @@ def petty_cash_report(rng, *, branch_id=None, entry_type=''):
         'columns': [
             {'key': 'date', 'label': 'Date', 'type': 'code'},
             {'key': 'branch', 'label': 'Branch'},
+            {'key': 'bill_number', 'label': 'Bill number'},
             {'key': 'description', 'label': 'Description'},
             {'key': 'type', 'label': 'Type'},
             {'key': 'amount', 'label': 'Amount', 'type': 'money', 'sum': True},

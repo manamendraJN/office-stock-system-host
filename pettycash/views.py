@@ -195,7 +195,8 @@ def expense_create(request):
     if request.method == 'POST' and form.is_valid():
         cd = form.cleaned_data
         try:
-            services.record_expense(request, cd['amount'], cd['description'], cd.get('entry_date') or timezone.localdate())
+            services.record_expense(request, cd['amount'], cd['description'], cd.get('entry_date') or timezone.localdate(),
+                                    cd.get('bill_number', ''))
             left = services.get_balance(user.branch_id)
             messages.success(request, f'Spending recorded. Petty cash left: Rs. {left:,.2f}'
                              + (' (low, please request more)' if is_low(left, services.get_low_level()) else ''))

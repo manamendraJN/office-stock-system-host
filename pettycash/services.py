@@ -135,7 +135,7 @@ def review_request(request, pk, *, approve, amount, note):
 
 
 # ------------------------------------------------------------------ spending
-def record_expense(request, amount, description, entry_date):
+def record_expense(request, amount, description, entry_date, bill_number=''):
     """Money spent from the user's own branch cash, e.g. buying inventory items. It cannot take the balance below zero."""
     user = request.user
     if not user.branch_id:
@@ -146,9 +146,9 @@ def record_expense(request, amount, description, entry_date):
         if problem:
             raise BadRequest(problem, {'amount': problem})
         entry = PettyCashEntry.objects.create(branch_id=user.branch_id, type=PETTY_CASH_ENTRY.EXPENSE, amount=-Decimal(amount),
-                                              description=description, entry_date=entry_date or timezone.localdate(), created_by=user)
+                                              description=description, bill_number=bill_number, entry_date=entry_date or timezone.localdate(), created_by=user)
     log_audit(request, 'petty_cash.expense', 'PettyCashEntry', entry.pk,
-              new_value={'branch': user.branch_id, 'amount': amount, 'description': description})
+              new_value={'branch': user.branch_id, 'amount': amount, 'description': description, 'bill_number': bill_number})
     return entry
 
 
@@ -167,6 +167,7 @@ def cancel_expense(request, pk):
             raise Conflict(problem)
         PettyCashEntry.objects.create(branch_id=entry.branch_id, type=PETTY_CASH_ENTRY.REVERSAL, amount=-entry.amount,
                                       description=f'Cancelled: {entry.description}'[:300], entry_date=timezone.localdate(),
+                                      bill_number=entry.bill_number,
                                       reversal_of=entry, created_by=user)
     log_audit(request, 'petty_cash.cancel_expense', 'PettyCashEntry', entry.pk)
     return entry

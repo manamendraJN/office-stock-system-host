@@ -45,6 +45,7 @@ class PettyCashEntry(AppendOnlyModel):
     type = models.CharField(max_length=20, choices=choices(PETTY_CASH_ENTRY))
     amount = models.DecimalField(**MONEY)
     description = models.CharField(max_length=300, blank=True, default='')
+    bill_number = models.CharField(max_length=100, blank=True, default='')
     entry_date = models.DateField()  # the day the money was received or spent
     request = models.ForeignKey(PettyCashRequest, null=True, blank=True, on_delete=models.PROTECT, related_name='entries')
     reversal_of = models.OneToOneField('self', null=True, blank=True, on_delete=models.PROTECT, related_name='reversed_by')

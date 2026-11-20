@@ -9,6 +9,7 @@
   <p class="notice" style="margin:0">Available petty cash: <b>{{ balance|money }}</b>. Use this when you spend petty cash, for example buying inventory items.</p>
   {% field form.amount %}
   {% field form.description %}
+  {% field form.bill_number %}
   {% field form.entry_date %}
   <div class="form-actions"><a class="btn btn-secondary" href="{% url 'pettycash:overview' %}">Cancel</a><button class="btn" type="submit">Save</button></div>
 </form>
