@@ -173,6 +173,35 @@ def cancel_expense(request, pk):
     return entry
 
 
+def edit_expense(request, pk, amount, description, entry_date, bill_number=''):
+    """Correct an expense with a reversal and replacement so the cash book stays auditable."""
+    user = request.user
+    with transaction.atomic():
+        entry = PettyCashEntry.objects.filter(pk=pk).first()
+        if entry is None or not can_see_branch(user, entry.branch_id):
+            raise NotFound('Petty cash entry not found')
+        if entry.branch_id != user.branch_id and not has_any(user, ['petty_cash.approve']):
+            raise Forbidden('Only the branch that spent the money, or a manager, can edit this expense')
+        Branch.objects.select_for_update().filter(pk=entry.branch_id).first()
+        problem = rules.cancel_expense_problem(entry.type, PettyCashEntry.objects.filter(reversal_of=entry).exists())
+        if problem:
+            raise Conflict(problem)
+        available = get_balance(entry.branch_id) - entry.amount
+        problem = rules.expense_problem(available, amount)
+        if problem:
+            raise BadRequest(problem, {'amount': problem})
+        PettyCashEntry.objects.create(branch_id=entry.branch_id, type=PETTY_CASH_ENTRY.REVERSAL, amount=-entry.amount,
+                                      description=f'Edited: {entry.description}'[:300], entry_date=timezone.localdate(),
+                                      bill_number=entry.bill_number, reversal_of=entry, created_by=user)
+        replacement = PettyCashEntry.objects.create(branch_id=entry.branch_id, type=PETTY_CASH_ENTRY.EXPENSE,
+                                      amount=-Decimal(amount), description=description, bill_number=bill_number,
+                                      entry_date=entry_date or timezone.localdate(), created_by=user)
+    log_audit(request, 'petty_cash.edit_expense', 'PettyCashEntry', entry.pk,
+              old_value={'amount': -entry.amount, 'description': entry.description, 'bill_number': entry.bill_number},
+              new_value={'amount': amount, 'description': description, 'bill_number': bill_number, 'replacement_id': replacement.pk})
+    return replacement
+
+
 # ------------------------------------------------------------------ settings
 def set_low_level(request, level):
     if level < 0:

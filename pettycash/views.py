@@ -210,6 +210,36 @@ def expense_create(request):
 
 
 @permission_required(*VIEW_ANY)
+def expense_edit(request, pk):
+    user = request.user
+    entry = PettyCashEntry.objects.filter(pk=pk, type=PETTY_CASH_ENTRY.EXPENSE).first()
+    if entry is None:
+        from django.http import Http404
+        raise Http404
+    allowed = entry.branch_id == user.branch_id and has_any(user, ['petty_cash.request'])
+    allowed = allowed or (has_any(user, ['petty_cash.approve']) and not is_branch_side(user))
+    if not allowed:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied
+    if PettyCashEntry.objects.filter(reversal_of=entry).exists():
+        messages.error(request, 'This expense has already been cancelled or edited.')
+        return redirect('pettycash:ledger')
+    initial = {'amount': -entry.amount, 'description': entry.description, 'bill_number': entry.bill_number, 'entry_date': entry.entry_date}
+    form = pforms.ExpenseForm(request.POST or None, initial=initial)
+    if request.method == 'POST' and form.is_valid():
+        cd = form.cleaned_data
+        try:
+            services.edit_expense(request, pk, cd['amount'], cd['description'], cd.get('entry_date'), cd.get('bill_number', ''))
+            messages.success(request, 'Expense updated in the petty cash book.')
+            return redirect('pettycash:ledger')
+        except ServiceError as exc:
+            apply_service_error(form, exc)
+    return render(request, 'pettycash/expense_form.html', {'form': form, 'balance': services.get_balance(entry.branch_id),
+                                                          'low_level': services.get_low_level(), 'today': timezone.localdate().isoformat(),
+                                                          'editing': True})
+
+
+@permission_required(*VIEW_ANY)
 @require_POST
 def expense_cancel(request, pk):
     try:

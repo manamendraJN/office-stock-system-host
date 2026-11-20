@@ -125,6 +125,7 @@ ACTION_LABELS = {
     'petty_cash.cancel': 'Cancelled a petty cash request',
     'petty_cash.review': 'Reviewed a petty cash request',
     'petty_cash.expense': 'Recorded a petty cash expense',
+    'petty_cash.edit_expense': 'Edited a petty cash expense',
     'petty_cash.cancel_expense': 'Cancelled a petty cash expense',
     'petty_cash.set_low_level': 'Changed the low petty cash level',
     'payment_voucher.create': 'Created a payment voucher',

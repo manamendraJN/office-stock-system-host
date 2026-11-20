@@ -14,5 +14,6 @@ urlpatterns = [
     path('petty-cash/cash-book/', views.ledger, name='ledger'),
     path('petty-cash/spend/', views.expense_create, name='expense_create'),
     path('petty-cash/entries/<int:pk>/cancel/', views.expense_cancel, name='expense_cancel'),
+    path('petty-cash/entries/<int:pk>/edit/', views.expense_edit, name='expense_edit'),
     path('petty-cash/settings/', views.settings_view, name='settings'),
 ]

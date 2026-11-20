@@ -31,8 +31,9 @@
     <td class="muted">{{ x.e.created_by.name }}</td>
     <td class="num nowrap" style="color:{% if x.e.amount < 0 %}var(--red-600){% else %}var(--green-700,#15803d){% endif %}">{% if x.e.amount > 0 %}+{% endif %}{{ x.e.amount|money }}</td>
     <td class="nowrap">{% if x.can_cancel %}
-      <form method="post" action="{% url 'pettycash:expense_cancel' x.e.pk %}" class="inline" data-confirm="Cancel this expense? The money goes back into petty cash.">{% csrf_token %}
-        <button class="linkbtn" type="submit" style="color:var(--red-600)">Cancel</button></form>{% endif %}</td></tr>
+      <a class="linkbtn" href="{% url 'pettycash:expense_edit' x.e.pk %}">Edit</a>
+      <form method="post" action="{% url 'pettycash:expense_cancel' x.e.pk %}" class="inline" data-confirm="Delete this expense? The entry will be marked cancelled and the money returned to petty cash.">{% csrf_token %}
+        <button class="linkbtn" type="submit" style="color:var(--red-600)">Delete</button></form>{% endif %}</td></tr>
   {% endfor %}</tbody>
 </table></div>
 {% pagination page pages total "entries" %}

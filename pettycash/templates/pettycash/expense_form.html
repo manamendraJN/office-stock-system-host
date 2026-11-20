@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% load ui %}
-{% block title %}Record spending{% endblock %}
+{% block title %}{% if editing %}Edit spending{% else %}Record spending{% endif %}{% endblock %}
 {% block content %}
-<div class="page-header"><div><h1>Record spending</h1></div></div>
+<div class="page-header"><div><h1>{% if editing %}Edit spending{% else %}Record spending{% endif %}</h1></div></div>
 <form method="post" class="card card-body stack narrow" novalidate>
   {% csrf_token %}
   {% if form.non_field_errors %}<div class="alert alert-error" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
@@ -11,6 +11,6 @@
   {% field form.description %}
   {% field form.bill_number %}
   {% field form.entry_date %}
-  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'pettycash:overview' %}">Cancel</a><button class="btn" type="submit">Save</button></div>
+  <div class="form-actions"><a class="btn btn-secondary" href="{% url 'pettycash:ledger' %}">Cancel</a><button class="btn" type="submit">{% if editing %}Save changes{% else %}Save{% endif %}</button></div>
 </form>
 {% endblock %}
